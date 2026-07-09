@@ -71,12 +71,17 @@ For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides
 
 Local audio files in `sound/` are served under `/sound/...`. The default profile plays `sound/transmission.mp3` as the first cue for each announcement, then starts the mapped event sample while the transmission cue is still playing. Generated WebAudio impacts and the dynamic spoken line follow the same queue.
 
+Dynamic voice lines are generated server-side through Fish Audio when `FISH_AUDIO_SECRET` or `FISH_API_KEY` is present in `.env`. The browser calls the local `/api/tts` route; it never sees the Fish API key. Generated MP3s are cached in `data/tts-cache/`.
+
 Edit `config.json` to change the experience:
 
 - `announcer.transmission.src`: lead-in cue, such as `/sound/transmission.mp3`.
 - `announcer.samples`: per-event MP3s. Supported keys include `first_blood`, `new_ticket`, `solved`, `double_kill`, `triple_kill`, `killing_spree`, `unstoppable`, `rampage`, `godlike`, and `monster_kill`.
-- `announcer.voice`: browser text-to-speech tuning for dynamic names and services.
+- `announcer.tts`: enables Fish-generated voice playback for dynamic names and services.
+- `announcer.voice`: browser text-to-speech fallback tuning if Fish TTS fails.
 - `announcements.templates` and `announcements.tiers`: custom lines for ticket and CTF logic using placeholders like `{sound}`, `{title}`, `{name}`, and `{service}`.
+- `fishAudio.voices.solved`: Fish voice model for resolved-ticket announcements.
+- `fishAudio.voices.first_blood`: Fish voice model for first-blood announcements.
 
 ## Local Test Panel
 

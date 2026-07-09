@@ -15,6 +15,7 @@
     },
     background: null,
     transmission: null,
+    tts: { enabled: false, volume: 1, timeoutMs: 9000 },
     samples: {},
     sampleVolume: 0.9
   };
@@ -48,6 +49,7 @@
       ...next,
       voice: { ...DEFAULT_PROFILE.voice, ...(next.voice || {}) },
       samples: { ...DEFAULT_PROFILE.samples, ...(next.samples || {}) },
+      tts: { ...DEFAULT_PROFILE.tts, ...(next.tts || {}) },
       transmission: next.transmission === undefined ? DEFAULT_PROFILE.transmission : next.transmission,
       background: next.background === undefined ? DEFAULT_PROFILE.background : next.background
     };
@@ -210,6 +212,36 @@
     });
   }
 
+  function ttsUrl(a) {
+    const params = new URLSearchParams({
+      text: a.line || '',
+      kind: a.kind || '',
+      title: a.title || ''
+    });
+    if (a.count !== undefined) params.set('count', String(a.count));
+    return `/api/tts?${params.toString()}`;
+  }
+
+  function playAiVoice(a) {
+    return new Promise(resolve => {
+      if (!profile.tts || !profile.tts.enabled || typeof Audio === 'undefined') return resolve(false);
+      const audio = makeAudio(ttsUrl(a), { volume: profile.tts.volume ?? 1 });
+      if (!audio) return resolve(false);
+      let finished = false;
+      const done = ok => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      const timer = setTimeout(() => done(false), profile.tts.timeoutMs || 9000);
+      audio.onended = () => done(true);
+      audio.onerror = () => done(false);
+      const started = audio.play();
+      if (started && started.catch) started.catch(() => done(false));
+    });
+  }
+
   // ---- banners ----
   function showBanner(a) {
     const big = a.kind === 'first_blood' || (a.kind === 'tier' && a.count >= 2);
@@ -243,7 +275,8 @@
       const sampleMs = playSample(a);
       const stingerMs = playStinger(a);
       await new Promise(r => setTimeout(r, Math.max(sampleMs, stingerMs, transmissionMs - leadMs)));
-      await speak(a.line);
+      const aiSpoke = await playAiVoice(a);
+      if (!aiSpoke) await speak(a.line);
       await new Promise(r => setTimeout(r, 400));
     } finally {
       hideBanners();

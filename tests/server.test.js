@@ -131,3 +131,47 @@ test('serves local sound assets from the configured sound directory', async () =
     await close(server);
   }
 });
+
+test('tts endpoint returns Fish-generated mp3 without exposing the API key', async () => {
+  const config = {
+    timezone: 'UTC',
+    webhookSecret: 'secret',
+    agents: ['One'],
+    services: ['CTF']
+  };
+  const calls = [];
+  const store = createStore(tmpFile(), config.timezone);
+  const { server } = createArenaServer({
+    config,
+    store,
+    fishTts: {
+      synthesize(payload) {
+        calls.push(payload);
+        return Promise.resolve(Buffer.from([9, 8, 7]));
+      }
+    },
+    now: () => Date.UTC(2026, 0, 2),
+    logger: quietLogger
+  });
+  const base = await listen(server);
+
+  try {
+    const res = await fetch(`${base}/api/tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'SOLVED, By One on CTF',
+        announcement: { kind: 'tier', count: 1 }
+      })
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers.get('content-type'), 'audio/mpeg');
+    assert.deepStrictEqual([...new Uint8Array(await res.arrayBuffer())], [9, 8, 7]);
+    assert.deepStrictEqual(calls, [{
+      text: 'SOLVED, By One on CTF',
+      announcement: { kind: 'tier', count: 1 }
+    }]);
+  } finally {
+    await close(server);
+  }
+});

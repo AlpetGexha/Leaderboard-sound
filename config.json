@@ -28,6 +28,7 @@
       "preferredVoices": ["Microsoft David", "Google US English", "Daniel", "Alex"]
     },
     "transmission": { "src": "/sound/transmission.mp3", "volume": 0.82, "leadMs": 180, "durationMs": 900 },
+    "tts": { "enabled": true, "volume": 1, "timeoutMs": 9000 },
     "sampleVolume": 0.92,
     "samples": {
       "first_blood": "/sound/First%20Blood.mp3",
@@ -38,6 +39,22 @@
       "rampage": "/sound/RampPage.mp3",
       "godlike": "/sound/Domanating.mp3",
       "monster_kill": "/sound/MonsterKill.mp3"
+    }
+  },
+  "fishAudio": {
+    "enabled": true,
+    "model": "s2.1-pro-free",
+    "latency": "balanced",
+    "temperature": 0.82,
+    "top_p": 0.7,
+    "speed": 1,
+    "volume": 0,
+    "mp3_bitrate": 128,
+    "voices": {
+      "solved": "d13f84b987ad4f22b56d2b47f4eb838e",
+      "first_blood": "7a18a1851d2649108c48ec9f2c80eb2c",
+      "custom": "7a18a1851d2649108c48ec9f2c80eb2c",
+      "default": "7a18a1851d2649108c48ec9f2c80eb2c"
     }
   }
 }
