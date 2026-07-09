@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket Arena</title>
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+</head>
+<body>
+
+<div id="unlock-gate">
+  <div class="gate-inner">
+    <div class="gate-title">TICKET ARENA</div>
+    <button id="unlock-btn">CLICK TO ARM SPEAKERS 🔊</button>
+    <div class="gate-hint">browser needs one click before it may play sound</div>
+  </div>
+</div>
+
+<header>
+  <h1 class="site-title">TICKET <span class="accent">ARENA</span></h1>
+  <div class="header-meta">
+    <span id="day-label" class="day-label"></span>
+    <span id="first-blood-chip" class="fb-chip hidden"></span>
+    <span id="conn-dot" class="conn-dot" title="live connection"></span>
+  </div>
+</header>
+
+<main>
+  <section class="board-wrap">
+    <ol id="board" class="board"></ol>
+  </section>
+  <aside class="feed-wrap">
+    <h2 class="feed-title">KILL FEED</h2>
+    <ul id="feed" class="feed"></ul>
+  </aside>
+</main>
+
+<div id="mini-banner" class="mini-banner hidden"></div>
+
+<div id="announce" class="announce hidden">
+  <div class="announce-inner">
+    <div id="announce-title" class="announce-title"></div>
+    <div id="announce-line" class="announce-line"></div>
+  </div>
+</div>
+
+<div id="test-panel" class="test-panel hidden">
+  <div class="tp-head">TEST PANEL <span class="tp-hint">(press T to hide)</span></div>
+  <div class="tp-row">
+    <label>service <select id="test-service"></select></label>
+    <label>secret <input id="test-secret" type="text" size="16"></label>
+    <button id="test-reset" class="tp-danger">RESET DAY</button>
+  </div>
+  <div id="test-agent-grid" class="tp-grid"></div>
+</div>
+
+<script src="/js/announcer.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
