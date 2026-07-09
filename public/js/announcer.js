@@ -20,6 +20,7 @@
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     ctx.resume();
     // prime speechSynthesis inside the user gesture
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
     const u = new SpeechSynthesisUtterance('');
     u.volume = 0;
     speechSynthesis.speak(u);

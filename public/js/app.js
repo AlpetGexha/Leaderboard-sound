@@ -9,6 +9,7 @@
   const gate = document.getElementById('unlock-gate');
 
   let lastSolved = {};   // agent -> solved count, to detect who scored
+  let testPanelReady = false;
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({
@@ -24,9 +25,10 @@
   function render(snapshot) {
     const { state, day } = snapshot;
     dayLabel.textContent = day;
+    setupTestPanel(snapshot.config);
 
     if (state.firstBlood) {
-      fbChip.innerHTML = `🩸 FIRST BLOOD: <strong>${esc(state.firstBlood.agent)}</strong> on ${esc(state.firstBlood.service)}`;
+      fbChip.innerHTML = `FIRST BLOOD: <strong>${esc(state.firstBlood.agent)}</strong> on ${esc(state.firstBlood.service)}`;
       fbChip.classList.remove('hidden');
     } else {
       fbChip.classList.add('hidden');
@@ -39,7 +41,7 @@
     board.innerHTML = state.leaderboard.map(r => `
       <li class="board-row ${r.rank === 1 && r.solved > 0 ? 'top1' : ''}" data-agent="${esc(r.agent)}">
         <span class="rank">#${r.rank}</span>
-        <span class="agent">${esc(r.agent)} ${r.streak ? '<span class="streak-badge">🔥</span>' : ''}</span>
+        <span class="agent">${esc(r.agent)} ${r.streak ? '<span class="streak-badge">*</span>' : ''}</span>
         <span class="solved">${r.solved}</span>
       </li>`).join('');
 
@@ -102,15 +104,22 @@
   const serviceSel = document.getElementById('test-service');
   const grid = document.getElementById('test-agent-grid');
 
-  const AGENTS = ['Alpet', 'Bajram', 'Kushtrim', 'Mirlind', 'Ermira'];
-  const SERVICES = ['Billing', 'Hosting', 'Domains', 'Email', 'VPN'];
-
   secretInput.value = localStorage.getItem('arena-secret') || 'arena-dev-secret';
   secretInput.addEventListener('change', () => localStorage.setItem('arena-secret', secretInput.value));
-  serviceSel.innerHTML = SERVICES.map(s => `<option>${esc(s)}</option>`).join('');
 
   let ticketSeq = Math.floor(Date.now() / 1000) % 100000;
   const openTickets = {}; // agent -> last opened ticketId (so Resolve can close "their" ticket)
+
+  function setupTestPanel(config) {
+    if (testPanelReady || !config) return;
+    serviceSel.innerHTML = config.services.map(s => `<option>${esc(s)}</option>`).join('');
+    grid.innerHTML = config.agents.map(a => `
+      <span class="tp-name">${esc(a)}</span>
+      <button data-agent="${esc(a)}" data-type="ticket.created">+ ticket</button>
+      <button data-agent="${esc(a)}" data-type="ticket.resolved" class="solve">resolve</button>
+    `).join('');
+    testPanelReady = true;
+  }
 
   async function sendEvent(type, agent) {
     let ticketId;
@@ -128,12 +137,6 @@
     });
     if (!res.ok) console.warn('test event rejected:', res.status, await res.text());
   }
-
-  grid.innerHTML = AGENTS.map(a => `
-    <span class="tp-name">${esc(a)}</span>
-    <button data-agent="${esc(a)}" data-type="ticket.created">+ ticket</button>
-    <button data-agent="${esc(a)}" data-type="ticket.resolved" class="solve">✔ resolve</button>
-  `).join('');
 
   grid.addEventListener('click', e => {
     const btn = e.target.closest('button');
