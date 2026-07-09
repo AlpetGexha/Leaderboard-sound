@@ -1,45 +1,78 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 
-function loadAnnouncer(overrides = {}) {
-  const elements = new Map();
-  const element = () => ({
+function elements() {
+  const make = () => ({
     textContent: '',
-    classList: { add() {}, remove() {}, toggle() {} }
+    classList: {
+      add() {},
+      remove() {},
+      toggle() {}
+    }
   });
-  const context = {
-    console,
-    setTimeout,
-    clearTimeout,
-    URLSearchParams,
-    window: {},
-    document: {
-      getElementById(id) {
-        if (!elements.has(id)) elements.set(id, element());
-        return elements.get(id);
-      }
-    },
-    ...overrides
+  return {
+    overlay: make(),
+    overlayTitle: make(),
+    overlayLine: make(),
+    mini: make()
   };
-  context.window.AudioContext = class {
-    resume() {}
-  };
-  vm.createContext(context);
-  const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'announcer.js'), 'utf8');
-  vm.runInContext(source, context);
-  return context.window.Announcer;
 }
 
-test('unlock does not throw when speech synthesis is unavailable', () => {
-  const announcer = loadAnnouncer();
+function installAudioContext() {
+  global.window = global.window || {};
+  global.window.AudioContext = class {
+    constructor() {
+      this.currentTime = 0;
+      this.sampleRate = 44100;
+      this.destination = {};
+    }
+    resume() {}
+    createOscillator() {
+      return {
+        type: 'square',
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() { return this; },
+        start() {},
+        stop() {}
+      };
+    }
+    createGain() {
+      return {
+        gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() { return this; }
+      };
+    }
+    createBuffer() {
+      return { getChannelData() { return new Float32Array(1); } };
+    }
+    createBufferSource() {
+      return { connect() { return this; }, start() {}, set buffer(_) {} };
+    }
+    createBiquadFilter() {
+      return { type: 'lowpass', frequency: { value: 0 }, connect() { return this; } };
+    }
+  };
+}
+
+async function loadAnnouncer(overrides = {}) {
+  installAudioContext();
+  global.window.speechSynthesis = overrides.speechSynthesis;
+  global.window.SpeechSynthesisUtterance = overrides.SpeechSynthesisUtterance;
+  global.Audio = overrides.Audio;
+  global.window.Audio = overrides.Audio;
+  const announcerModule = await import('../src/lib/announcer.js');
+  const createAnnouncer = announcerModule.createAnnouncer || announcerModule.default.createAnnouncer;
+  const nodes = elements();
+  return createAnnouncer({ getOverlayElements: () => nodes });
+}
+
+test('unlock does not throw when speech synthesis is unavailable', async () => {
+  const announcer = await loadAnnouncer();
   assert.doesNotThrow(() => announcer.unlock());
 });
 
-test('unlock starts configured transmission bed after user gesture', () => {
+test('unlock starts configured transmission bed after user gesture', async () => {
   const played = [];
   const audios = [];
   class FakeAudio {
@@ -55,7 +88,7 @@ test('unlock starts configured transmission bed after user gesture', () => {
     }
   }
 
-  const announcer = loadAnnouncer({ Audio: FakeAudio });
+  const announcer = await loadAnnouncer({ Audio: FakeAudio });
   announcer.configure({
     background: { src: '/sound/transmission.mp3', volume: 0.22, loop: true }
   });
@@ -81,7 +114,7 @@ test('announcement plays transmission cue before the mapped event sample', async
     }
   }
 
-  const announcer = loadAnnouncer({ Audio: FakeAudio });
+  const announcer = await loadAnnouncer({ Audio: FakeAudio });
   announcer.configure({
     transmission: { src: '/sound/transmission.mp3', volume: 0.8, leadMs: 1 },
     samples: { double_kill: '/sound/DoubleKill.mp3' }
@@ -113,7 +146,7 @@ test('announcement plays Fish TTS audio for the custom message after local sound
     }
   }
 
-  const announcer = loadAnnouncer({ Audio: FakeAudio });
+  const announcer = await loadAnnouncer({ Audio: FakeAudio });
   announcer.configure({
     transmission: { src: '/sound/transmission.mp3', leadMs: 1, durationMs: 2 },
     samples: { double_kill: '/sound/DoubleKill.mp3' },

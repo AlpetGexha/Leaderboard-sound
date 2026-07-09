@@ -1,59 +1,60 @@
-/* Announcer: strictly-serial announcement queue.
-   Each item: stinger (WebAudio synth) -> voice line (SpeechSynthesis) -> banner hides -> gap -> next.
-   Pattern adapted from first-strike-alert's announcement queue. */
-(function () {
-  'use strict';
+const GAP_MS = 1200;
+const SPEECH_TIMEOUT_MS = 8000;
 
-  const GAP_MS = 1200;
-  const SPEECH_TIMEOUT_MS = 8000;
-  const DEFAULT_PROFILE = {
-    voice: {
-      rate: 0.82,
-      pitch: 0.35,
-      volume: 1,
-      preferredVoices: ['Microsoft David', 'Google US English', 'Daniel', 'Alex']
-    },
-    background: null,
-    transmission: null,
-    tts: { enabled: false, volume: 1, timeoutMs: 9000 },
-    samples: {},
-    sampleVolume: 0.9
+const DEFAULT_PROFILE = {
+  voice: {
+    rate: 0.82,
+    pitch: 0.35,
+    volume: 1,
+    preferredVoices: ['Microsoft David', 'Google US English', 'Daniel', 'Alex']
+  },
+  background: null,
+  transmission: null,
+  tts: { enabled: false, volume: 1, timeoutMs: 9000 },
+  samples: {},
+  sampleVolume: 0.9
+};
+
+const SAMPLE_KEYS = {
+  first_blood: 'first_blood',
+  new_ticket: 'new_ticket',
+  1: 'solved',
+  2: 'double_kill',
+  3: 'triple_kill',
+  4: 'killing_spree',
+  5: 'unstoppable',
+  7: 'rampage',
+  10: 'godlike',
+  15: 'monster_kill'
+};
+
+function mergeProfile(next = {}) {
+  return {
+    ...DEFAULT_PROFILE,
+    ...next,
+    voice: { ...DEFAULT_PROFILE.voice, ...(next.voice || {}) },
+    samples: { ...DEFAULT_PROFILE.samples, ...(next.samples || {}) },
+    tts: { ...DEFAULT_PROFILE.tts, ...(next.tts || {}) },
+    transmission: next.transmission === undefined ? DEFAULT_PROFILE.transmission : next.transmission,
+    background: next.background === undefined ? DEFAULT_PROFILE.background : next.background
   };
-  const SAMPLE_KEYS = {
-    first_blood: 'first_blood',
-    new_ticket: 'new_ticket',
-    1: 'solved',
-    2: 'double_kill',
-    3: 'triple_kill',
-    4: 'killing_spree',
-    5: 'unstoppable',
-    7: 'rampage',
-    10: 'godlike',
-    15: 'monster_kill'
-  };
+}
 
-  const overlay = document.getElementById('announce');
-  const overlayTitle = document.getElementById('announce-title');
-  const overlayLine = document.getElementById('announce-line');
-  const mini = document.getElementById('mini-banner');
+function getWindow() {
+  return typeof window === 'undefined' ? {} : window;
+}
 
+function getAudioCtor() {
+  const win = getWindow();
+  return win.Audio || globalThis.Audio;
+}
+
+export function createAnnouncer({ getOverlayElements }) {
   let ctx = null;
   let queue = [];
   let playing = false;
   let profile = DEFAULT_PROFILE;
   let backgroundAudio = null;
-
-  function mergeProfile(next = {}) {
-    return {
-      ...DEFAULT_PROFILE,
-      ...next,
-      voice: { ...DEFAULT_PROFILE.voice, ...(next.voice || {}) },
-      samples: { ...DEFAULT_PROFILE.samples, ...(next.samples || {}) },
-      tts: { ...DEFAULT_PROFILE.tts, ...(next.tts || {}) },
-      transmission: next.transmission === undefined ? DEFAULT_PROFILE.transmission : next.transmission,
-      background: next.background === undefined ? DEFAULT_PROFILE.background : next.background
-    };
-  }
 
   function configure(next) {
     profile = mergeProfile(next);
@@ -64,8 +65,9 @@
   }
 
   function makeAudio(src, { volume = 1, loop = false } = {}) {
-    if (!src || typeof Audio === 'undefined') return null;
-    const audio = new Audio(src);
+    const AudioCtor = getAudioCtor();
+    if (!src || typeof AudioCtor === 'undefined') return null;
+    const audio = new AudioCtor(src);
     audio.volume = volume;
     audio.loop = loop;
     return audio;
@@ -91,18 +93,19 @@
   }
 
   function unlock() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    ctx.resume();
+    const win = getWindow();
+    const AudioContext = win.AudioContext || win.webkitAudioContext;
+    if (AudioContext && !ctx) ctx = new AudioContext();
+    if (ctx && ctx.resume) ctx.resume();
     startBackground();
-    // prime speechSynthesis inside the user gesture
-    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
-    const u = new window.SpeechSynthesisUtterance('');
+    if (!win.speechSynthesis || !win.SpeechSynthesisUtterance) return;
+    const u = new win.SpeechSynthesisUtterance('');
     u.volume = 0;
-    window.speechSynthesis.speak(u);
+    win.speechSynthesis.speak(u);
   }
 
-  // ---- stinger synthesis ----
   function tone(freq, start, dur, { type = 'square', gain = 0.18, slideTo = null } = {}) {
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = type;
@@ -117,6 +120,7 @@
   }
 
   function noiseHit(start, dur, gain = 0.25) {
+    if (!ctx) return;
     const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -131,8 +135,7 @@
     src.start(ctx.currentTime + start);
   }
 
-  // each stinger returns its duration in ms
-  const STINGERS = {
+  const stingers = {
     blip() {
       tone(980, 0, 0.08, { type: 'square', gain: 0.12 });
       tone(1960, 0.08, 0.1, { type: 'square', gain: 0.08 });
@@ -144,7 +147,7 @@
       tone(440, 0.08, 0.18, { type: 'square', gain: 0.12 });
       return 480;
     },
-    first_blood() {
+    firstBlood() {
       noiseHit(0, 0.5, 0.3);
       tone(150, 0, 0.7, { type: 'sawtooth', gain: 0.28, slideTo: 40 });
       tone(75, 0.25, 0.9, { type: 'sawtooth', gain: 0.22, slideTo: 30 });
@@ -154,7 +157,6 @@
     tier(count) {
       noiseHit(0, 0.45, count >= 5 ? 0.32 : 0.22);
       tone(72, 0, 0.8, { type: 'sawtooth', gain: count >= 5 ? 0.3 : 0.22, slideTo: 42 });
-      // rising arpeggio, one note per kill (capped), ending on a power chord
       const notes = Math.min(count, 8);
       const base = 330;
       for (let i = 0; i < notes; i++) {
@@ -184,21 +186,21 @@
 
   function playStinger(a) {
     if (!ctx) return 0;
-    if (a.kind === 'first_blood') return STINGERS.first_blood();
-    if (a.kind === 'new_ticket') return STINGERS.blip();
-    if (a.kind === 'tier') return a.count >= 2 ? STINGERS.tier(a.count) : STINGERS.solved();
+    if (a.kind === 'first_blood') return stingers.firstBlood();
+    if (a.kind === 'new_ticket') return stingers.blip();
+    if (a.kind === 'tier') return a.count >= 2 ? stingers.tier(a.count) : stingers.solved();
     return 0;
   }
 
-  // ---- speech ----
   function speak(line) {
     return new Promise(resolve => {
-      if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return setTimeout(resolve, 2000);
-      const u = new window.SpeechSynthesisUtterance(line);
+      const win = getWindow();
+      if (!win.speechSynthesis || !win.SpeechSynthesisUtterance) return setTimeout(resolve, 2000);
+      const u = new win.SpeechSynthesisUtterance(line);
       u.rate = profile.voice.rate;
       u.pitch = profile.voice.pitch;
       u.volume = profile.voice.volume;
-      const voices = window.speechSynthesis.getVoices();
+      const voices = win.speechSynthesis.getVoices();
       const preferred = profile.voice.preferredVoices || [];
       const chosen = preferred
         .map(name => voices.find(v => v.name && v.name.toLowerCase().includes(name.toLowerCase())))
@@ -208,7 +210,7 @@
       const timer = setTimeout(done, SPEECH_TIMEOUT_MS);
       u.onend = done;
       u.onerror = done;
-      window.speechSynthesis.speak(u);
+      win.speechSynthesis.speak(u);
     });
   }
 
@@ -224,7 +226,7 @@
 
   function playAiVoice(a) {
     return new Promise(resolve => {
-      if (!profile.tts || !profile.tts.enabled || typeof Audio === 'undefined') return resolve(false);
+      if (!profile.tts || !profile.tts.enabled) return resolve(false);
       const audio = makeAudio(ttsUrl(a), { volume: profile.tts.volume ?? 1 });
       if (!audio) return resolve(false);
       let finished = false;
@@ -242,26 +244,26 @@
     });
   }
 
-  // ---- banners ----
   function showBanner(a) {
+    const { overlay, overlayTitle, overlayLine, mini } = getOverlayElements();
     const big = a.kind === 'first_blood' || (a.kind === 'tier' && a.count >= 2);
-    if (big) {
+    if (big && overlay && overlayTitle && overlayLine) {
       overlayTitle.textContent = a.title;
       overlayLine.textContent = a.line;
       overlay.classList.toggle('gold', a.kind === 'tier' && a.count >= 5);
       overlay.classList.remove('hidden');
-    } else {
-      mini.textContent = `${a.title} — ${a.line}`;
+    } else if (mini) {
+      mini.textContent = `${a.title} - ${a.line}`;
       mini.classList.remove('hidden');
     }
   }
 
   function hideBanners() {
-    overlay.classList.add('hidden');
-    mini.classList.add('hidden');
+    const { overlay, mini } = getOverlayElements();
+    if (overlay) overlay.classList.add('hidden');
+    if (mini) mini.classList.add('hidden');
   }
 
-  // ---- queue ----
   async function playNext() {
     if (playing) return;
     const a = queue.shift();
@@ -285,9 +287,12 @@
     }
   }
 
-  window.Announcer = {
+  return {
     configure,
     unlock,
-    enqueue(a) { queue.push(a); playNext(); }
+    enqueue(a) {
+      queue.push(a);
+      playNext();
+    }
   };
-})();
+}

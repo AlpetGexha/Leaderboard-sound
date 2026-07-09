@@ -2,15 +2,26 @@
 
 FPS-style live leaderboard for a 5-person support-ticket team. Helpdesk webhook events update a daily leaderboard, trigger SSE broadcasts, play synthesized stingers, speak announcer lines, and show fullscreen or mini banners in the browser.
 
-The app is intentionally small: zero npm dependencies, a Node.js HTTP server, append-only JSONL storage, and a vanilla HTML/CSS/JS frontend.
+The app keeps a small backend: a Node.js HTTP server, append-only JSONL storage, and a React/Vite frontend built into `dist/`.
 
 ## Quick Start
 
 ```powershell
-node server.js
+npm install
+npm run build
+npm start
 ```
 
 Open `http://localhost:3000`, then click `CLICK TO ARM SPEAKERS`. Browsers require a user gesture before WebAudio and speech playback can start.
+
+For frontend development, run the backend in one terminal and Vite in another:
+
+```powershell
+npm start
+npm run dev
+```
+
+Vite serves `http://127.0.0.1:5173` and proxies `/api`, `/events`, and `/sound` to the backend on port `3000`.
 
 Run tests with:
 
@@ -19,6 +30,8 @@ npm test
 ```
 
 On Windows, use `npm test` or `node --test`. Do not use `node --test tests/`; newer Node versions treat the directory argument as a module path on Windows.
+
+The React source lives in `src/`. The production server serves the generated `dist/` directory, so run `npm run build` after frontend changes before using `npm start` for the production build.
 
 ## Webhook Contract
 
@@ -130,8 +143,8 @@ The production frontend only depends on these backend routes:
 
 ## Laravel Port Note
 
-To port the backend to Laravel, keep `public/` unchanged and reimplement the three production routes above with the same JSON shapes:
+To port the backend to Laravel, keep the built frontend contract unchanged and reimplement the three production routes above with the same JSON shapes:
 
 - Validate and normalize incoming webhooks using the adapter contract.
 - Apply events with the same game-engine rules: first blood, duplicate rejection, resolved counts, tier milestones, feed limit, and tie-break order.
-- Serve `GET /api/state` snapshots and `GET /events` SSE broadcasts in the same format the vanilla frontend already consumes.
+- Serve `GET /api/state` snapshots and `GET /events` SSE broadcasts in the same format the React frontend already consumes.
