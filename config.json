@@ -1,0 +1,7 @@
+{
+  "port": 3000,
+  "timezone": "Europe/Tirane",
+  "webhookSecret": "arena-dev-secret",
+  "agents": ["Alpet", "Bajram", "Kushtrim", "Mirlind", "Ermira"],
+  "services": ["Billing", "Hosting", "Domains", "Email", "VPN"]
+}
