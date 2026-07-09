@@ -5,6 +5,6 @@
   "description": "FPS-style gamified leaderboard for support tickets",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/"
+    "test": "node --test"
   }
 }
