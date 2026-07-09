@@ -22,7 +22,7 @@ const fishTts = createFishTts({
 const { server, snapshot } = createArenaServer({
   config,
   store,
-  publicDir: path.join(__dirname, 'public'),
+  publicDir: path.join(__dirname, 'dist'),
   soundDir: path.join(__dirname, 'sound'),
   dev: DEV,
   webhookSecret: WEBHOOK_SECRET,

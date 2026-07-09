@@ -1,122 +1,72 @@
 'use strict';
-const { test } = require('node:test');
+require('../src/test/setup');
+const { test, afterEach } = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
+const React = require('react');
+const { render, screen, waitFor, fireEvent, cleanup } = require('@testing-library/react');
 
-function element() {
-  return {
-    innerHTML: '',
-    textContent: '',
-    value: '',
-    dataset: {},
-    children: [],
-    classList: { add() {}, remove() {}, toggle() {} },
-    listeners: {},
-    addEventListener(type, fn) { this.listeners[type] = fn; },
-    getBoundingClientRect() { return { top: 0 }; }
+const DEFAULT_SNAPSHOT = {
+  day: '2026-07-09',
+  state: {
+    leaderboard: [
+      { rank: 1, agent: 'Alpet', solved: 0, streak: false },
+      { rank: 2, agent: 'Bajram', solved: 0, streak: false }
+    ],
+    firstBlood: null,
+    feed: []
+  },
+  announcements: []
+};
+
+afterEach(() => {
+  cleanup();
+  global.__resetBrowserMocks();
+});
+
+async function renderApp(snapshot = DEFAULT_SNAPSHOT, overrides = {}) {
+  const appModule = await import('../src/App.jsx');
+  const App = appModule.default.default || appModule.default;
+  global.fetch = overrides.fetch || function (url) {
+    if (url === '/api/state') return Promise.resolve({ json: () => Promise.resolve(snapshot) });
+    return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('ok') });
   };
+  render(React.createElement(App));
 }
 
-function loadApp(snapshot, overrides = {}) {
-  const elements = new Map();
-  const byId = id => {
-    if (!elements.has(id)) elements.set(id, element());
-    return elements.get(id);
-  };
+test('renders the snapshot leaderboard and fallback test panel options', async () => {
+  await renderApp();
 
-  const context = {
-    console,
-    setTimeout,
-    clearTimeout,
-    requestAnimationFrame(fn) { fn(); },
-    location: { search: '' },
-    URLSearchParams,
-    Date,
-    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {}, ...(overrides.localStorage || {}) },
-    Announcer: { configure() {}, unlock() {}, enqueue() {} },
-    EventSource: class {
-      constructor() {}
-    },
-    fetch: overrides.fetch || function () {
-      return Promise.resolve({ json: () => Promise.resolve(snapshot) });
-    },
-    alert: overrides.alert || function () {},
-    document: {
-      activeElement: { tagName: 'BODY' },
-      getElementById: byId,
-      addEventListener() {}
-    }
-  };
-  vm.createContext(context);
-  const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
-  vm.runInContext(source, context);
-  return { elements };
-}
+  assert.ok((await screen.findAllByText('Alpet')).length >= 1);
+  assert.ok(screen.getAllByText('Bajram').length >= 1);
+  assert.ok(screen.getByText('CLICK TO ARM SPEAKERS'));
 
-test('test panel populates from leaderboard when snapshot config is missing', async () => {
-  const { elements } = loadApp({
-    day: '2026-07-09',
-    state: {
-      leaderboard: [
-        { rank: 1, agent: 'Alpet', solved: 0, streak: false },
-        { rank: 2, agent: 'Bajram', solved: 0, streak: false }
-      ],
-      firstBlood: null,
-      feed: []
-    },
-    announcements: []
-  });
+  fireEvent.keyDown(document, { key: 'T' });
 
-  await new Promise(resolve => setTimeout(resolve, 0));
-
-  assert.match(elements.get('test-agent-grid').innerHTML, /Alpet/);
-  assert.match(elements.get('test-agent-grid').innerHTML, /Bajram/);
-  assert.match(elements.get('test-service').innerHTML, /KFC/);
+  assert.ok(await screen.findByRole('option', { name: 'KFC' }));
+  assert.ok(screen.getAllByRole('button', { name: '+ ticket', exact: false }).length >= 1);
+  assert.ok(screen.getAllByRole('button', { name: 'resolve', exact: false }).length >= 1);
 });
 
 test('test panel retries once with default secret after a stale saved secret is rejected', async () => {
   const calls = [];
-  const removed = [];
-  const snapshot = {
-    day: '2026-07-09',
-    state: {
-      leaderboard: [{ rank: 1, agent: 'Alpet', solved: 0, streak: false }],
-      firstBlood: null,
-      feed: []
-    },
-    announcements: []
-  };
-  const { elements } = loadApp(snapshot, {
-    localStorage: {
-      getItem(key) { return key === 'arena-secret' ? 'old-secret' : null; },
-      removeItem(key) { removed.push(key); },
-      setItem() {}
-    },
+  window.localStorage.setItem('arena-secret', 'old-secret');
+
+  await renderApp(DEFAULT_SNAPSHOT, {
     fetch(url, options) {
-      if (url === '/api/state') return Promise.resolve({ json: () => Promise.resolve(snapshot) });
+      if (url === '/api/state') return Promise.resolve({ json: () => Promise.resolve(DEFAULT_SNAPSHOT) });
       calls.push({ url, options });
       return Promise.resolve(calls.length === 1
         ? { status: 401, ok: false, text: () => Promise.resolve('bad secret') }
         : { status: 200, ok: true, text: () => Promise.resolve('ok') });
-    },
-    alert() {}
-  });
-
-  await new Promise(resolve => setTimeout(resolve, 0));
-  elements.get('test-service').value = 'KFC';
-  await elements.get('test-agent-grid').listeners.click({
-    target: {
-      closest() {
-        return { dataset: { type: 'ticket.created', agent: 'Alpet' } };
-      }
     }
   });
-  await new Promise(resolve => setTimeout(resolve, 0));
 
-  assert.strictEqual(calls.length, 2);
+  await screen.findAllByText('Alpet');
+  fireEvent.keyDown(document, { key: 'T' });
+  fireEvent.click(screen.getAllByRole('button', { name: '+ ticket', exact: false })[0]);
+
+  await waitFor(() => assert.strictEqual(calls.length, 2));
   assert.strictEqual(calls[0].options.headers['X-Webhook-Secret'], 'old-secret');
   assert.strictEqual(calls[1].options.headers['X-Webhook-Secret'], 'arena-dev-secret');
-  assert.deepStrictEqual(removed, ['arena-secret']);
+  assert.strictEqual(window.localStorage.getItem('arena-secret'), null);
 });

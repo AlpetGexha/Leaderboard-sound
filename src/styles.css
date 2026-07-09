@@ -1,4 +1,3 @@
-/* ===== Ticket Arena — dark FPS theme ===== */
 :root {
   --bg: #0b0e13;
   --panel: #12161f;
@@ -13,15 +12,13 @@
   --glow: 0 0 18px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; }
+html, body, #root { min-height: 100%; }
 body {
   background: radial-gradient(1200px 600px at 50% -10%, #141a26 0%, var(--bg) 60%);
   color: var(--text);
   font-family: "Segoe UI", system-ui, sans-serif;
   overflow-x: hidden;
 }
-
-/* ---- unlock gate ---- */
 #unlock-gate {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(6, 8, 12, 0.96);
@@ -40,8 +37,6 @@ body {
 }
 #unlock-btn:hover { transform: scale(1.05); box-shadow: var(--glow) rgba(255,59,59,.7); }
 .gate-hint { margin-top: 1rem; color: var(--dim); font-size: .85rem; }
-
-/* ---- header ---- */
 header {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 1.2rem 2rem .8rem;
@@ -59,15 +54,11 @@ header {
 .fb-chip.hidden { display: none; }
 .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }
 .conn-dot.live { background: var(--green); box-shadow: 0 0 8px rgba(61,214,140,.8); }
-
-/* ---- layout ---- */
 main {
   display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;
   padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto;
 }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-
-/* ---- leaderboard ---- */
 .board { list-style: none; display: flex; flex-direction: column; gap: .8rem; }
 .board-row {
   display: grid; grid-template-columns: 4rem 1fr auto; align-items: center; gap: 1rem;
@@ -81,22 +72,17 @@ main {
 .board-row .solved { font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--blue); }
 .board-row.top1 { border-color: var(--gold); background: linear-gradient(90deg, rgba(255,197,61,.10), var(--panel) 45%); }
 .board-row.top1 .rank { color: var(--gold); }
-.board-row.top1 .rank::after { content: " 👑"; font-size: 1.1rem; }
+.board-row.top1 .rank::after { content: " TOP"; font-size: .8rem; }
 .board-row.top1 .solved { color: var(--gold); }
 .streak-badge { font-size: 1.1rem; filter: drop-shadow(0 0 6px rgba(255,120,30,.9)); animation: flicker 1.4s infinite; }
 @keyframes flicker { 0%,100% { opacity: 1; } 50% { opacity: .6; transform: scale(1.08); } }
-
-/* score glow when a row just scored */
 .board-row.scored { animation: scoredPulse 1.6s ease-out; }
 @keyframes scoredPulse {
   0% { box-shadow: 0 0 0 rgba(61,214,140,0); border-color: var(--green); }
   25% { box-shadow: 0 0 26px rgba(61,214,140,.55); }
   100% { box-shadow: 0 0 0 rgba(61,214,140,0); }
 }
-/* FLIP movement */
 .board-row.moving { transition: transform .6s cubic-bezier(.2,.9,.25,1.2); }
-
-/* ---- kill feed ---- */
 .feed-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; align-self: start; }
 .feed-title { font-size: .9rem; letter-spacing: .3em; color: var(--dim); margin-bottom: .8rem; }
 .feed { list-style: none; display: flex; flex-direction: column; gap: .55rem; }
@@ -107,8 +93,6 @@ main {
 .feed li .what.blood { color: var(--accent); font-weight: 800; }
 .feed li time { font-variant-numeric: tabular-nums; flex-shrink: 0; }
 @keyframes feedIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
-
-/* ---- mini banner (blips) ---- */
 .mini-banner {
   position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
   z-index: 60; padding: .6rem 1.6rem; border-radius: 999px;
@@ -119,8 +103,6 @@ main {
 }
 .mini-banner.hidden { display: none; }
 @keyframes miniIn { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
-
-/* ---- fullscreen announcement ---- */
 .announce {
   position: fixed; inset: 0; z-index: 80;
   display: flex; align-items: center; justify-content: center;
@@ -142,8 +124,6 @@ main {
   0%,100% { transform: none; } 20% { transform: translate(-4px, 2px); }
   40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -2px); } 80% { transform: translate(3px, 2px); }
 }
-
-/* ---- test panel ---- */
 .test-panel {
   position: fixed; bottom: 1rem; right: 1rem; z-index: 70;
   background: var(--panel2); border: 1px dashed var(--dim); border-radius: 10px;
