@@ -55,6 +55,10 @@ function installAudioContext() {
   };
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function loadAnnouncer(overrides = {}) {
   installAudioContext();
   global.window.speechSynthesis = overrides.speechSynthesis;
@@ -107,6 +111,7 @@ test('announcement plays transmission cue before the mapped event sample', async
       this.src = src;
       this.volume = 1;
       this.loop = false;
+      this.duration = src.includes('DoubleKill') ? 0.02 : 10;
     }
     play() {
       played.push(this.src);
@@ -126,9 +131,88 @@ test('announcement plays transmission cue before the mapped event sample', async
     line: 'DOUBLE KILL, By Alpet on KFC'
   });
 
-  await new Promise(resolve => setTimeout(resolve, 20));
+  await wait(30);
 
   assert.deepStrictEqual(played.slice(0, 2), ['/sound/transmission.mp3', '/sound/DoubleKill.mp3']);
+});
+
+test('announcement waits 1.5 seconds before starting the mapped event sample by default', async () => {
+  const played = [];
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      this.volume = 1;
+      this.loop = false;
+      this.duration = src.includes('DoubleKill') ? 0.02 : 10;
+    }
+    play() {
+      played.push(this.src);
+      return Promise.resolve();
+    }
+  }
+
+  const announcer = await loadAnnouncer({ Audio: FakeAudio });
+  announcer.configure({
+    transmission: { src: '/sound/transmission.mp3' },
+    samples: { double_kill: '/sound/DoubleKill.mp3' }
+  });
+  announcer.enqueue({
+    kind: 'tier',
+    count: 2,
+    title: 'DOUBLE KILL',
+    line: 'DOUBLE KILL, By Alpet on KFC'
+  });
+
+  await wait(1400);
+  assert.deepStrictEqual(played, ['/sound/transmission.mp3']);
+
+  await wait(150);
+  assert.deepStrictEqual(played.slice(0, 2), ['/sound/transmission.mp3', '/sound/DoubleKill.mp3']);
+});
+
+test('announcement uses measured sample duration before playing Fish TTS and stops transmission at the end', async () => {
+  const played = [];
+  const audios = [];
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      this.volume = 1;
+      this.loop = false;
+      this.duration = src.includes('DoubleKill') ? 0.03 : 20;
+      this.paused = false;
+      audios.push(this);
+    }
+    play() {
+      played.push(this.src);
+      if (this.src.startsWith('/api/tts')) setTimeout(() => { if (this.onended) this.onended(); }, 0);
+      return Promise.resolve();
+    }
+    pause() {
+      this.paused = true;
+    }
+  }
+
+  const announcer = await loadAnnouncer({ Audio: FakeAudio });
+  announcer.configure({
+    transmission: { src: '/sound/transmission.mp3', leadMs: 1 },
+    samples: { double_kill: '/sound/DoubleKill.mp3' },
+    tts: { enabled: true, volume: 1 }
+  });
+  announcer.enqueue({
+    kind: 'tier',
+    count: 2,
+    title: 'DOUBLE KILL',
+    line: 'DOUBLE KILL, By Alpet on KFC'
+  });
+
+  await wait(520);
+
+  assert.strictEqual(played[0], '/sound/transmission.mp3');
+  assert.strictEqual(played[1], '/sound/DoubleKill.mp3');
+  assert.match(played[2], /^\/api\/tts\?/);
+  const transmission = audios.find(audio => audio.src === '/sound/transmission.mp3');
+  assert.strictEqual(transmission.loop, true);
+  assert.strictEqual(transmission.paused, true);
 });
 
 test('announcement plays Fish TTS audio for the custom message after local sounds', async () => {
@@ -138,6 +222,7 @@ test('announcement plays Fish TTS audio for the custom message after local sound
       this.src = src;
       this.volume = 1;
       this.loop = false;
+      this.duration = src.includes('DoubleKill') ? 0.02 : 10;
     }
     play() {
       played.push(this.src);

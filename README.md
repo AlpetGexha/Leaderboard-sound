@@ -82,13 +82,14 @@ For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides
 
 ## Custom Announcer Audio
 
-Local audio files in `sound/` are served under `/sound/...`. The default profile plays `sound/transmission.mp3` as the first cue for each announcement, then starts the mapped event sample while the transmission cue is still playing. Generated WebAudio impacts and the dynamic spoken line follow the same queue.
+Local audio files in `sound/` are served under `/sound/...`. The default profile measures the mapped event sample, starts `sound/transmission.mp3` as a quieter lead-in for 1.5 seconds, then starts the event sample while the transmission cue is still playing. The transmission cue is stopped after the event sample, generated WebAudio impact, and dynamic spoken line finish.
 
 Dynamic voice lines are generated server-side through Fish Audio when `FISH_AUDIO_SECRET` or `FISH_API_KEY` is present in `.env`. The browser calls the local `/api/tts` route; it never sees the Fish API key. Generated MP3s are cached in `data/tts-cache/`.
 
 Edit `config.json` to change the experience:
 
 - `announcer.transmission.src`: lead-in cue, such as `/sound/transmission.mp3`.
+- `announcer.transmission.leadMs`: milliseconds to play the transmission cue before the event sample starts. The default is `1500`.
 - `announcer.samples`: per-event MP3s. Supported keys include `first_blood`, `new_ticket`, `solved`, `double_kill`, `triple_kill`, `killing_spree`, `unstoppable`, `rampage`, `godlike`, and `monster_kill`.
 - `announcer.tts`: enables Fish-generated voice playback for dynamic names and services.
 - `announcer.voice`: browser text-to-speech fallback tuning if Fish TTS fails.

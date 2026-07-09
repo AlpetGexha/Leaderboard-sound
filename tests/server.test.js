@@ -30,6 +30,13 @@ function close(server) {
   return new Promise((resolve, reject) => server.close(err => err ? reject(err) : resolve()));
 }
 
+test('default transmission volume is kept below the event samples', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
+
+  assert.ok(config.announcer.transmission.volume <= 0.6);
+  assert.ok(config.announcer.transmission.volume < config.announcer.sampleVolume);
+});
+
 test('webhooks after midnight are applied to the new day immediately', async () => {
   let now = Date.UTC(2026, 0, 1, 23, 59, 50);
   const config = {

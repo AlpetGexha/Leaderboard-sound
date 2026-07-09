@@ -1,5 +1,7 @@
 const GAP_MS = 1200;
 const SPEECH_TIMEOUT_MS = 8000;
+const DEFAULT_TRANSMISSION_LEAD_MS = 1500;
+const AUDIO_METADATA_TIMEOUT_MS = 300;
 
 const DEFAULT_PROFILE = {
   voice: {
@@ -73,23 +75,68 @@ export function createAnnouncer({ getOverlayElements }) {
     return audio;
   }
 
+  function stopAudio(audio) {
+    if (!audio) return;
+    if (audio.pause) audio.pause();
+    try {
+      audio.currentTime = 0;
+    } catch (_) {
+      // Some test/browser audio implementations expose currentTime as read-only.
+    }
+  }
+
+  function playAudio(audio) {
+    if (!audio) return false;
+    const started = audio.play();
+    if (started && started.catch) started.catch(() => {});
+    return true;
+  }
+
+  function measuredAudioMs(audio, fallbackMs) {
+    return new Promise(resolve => {
+      if (!audio) return resolve(0);
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        return resolve(Math.round(audio.duration * 1000));
+      }
+
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        const durationMs = Number.isFinite(audio.duration) && audio.duration > 0
+          ? Math.round(audio.duration * 1000)
+          : fallbackMs;
+        resolve(durationMs);
+      };
+
+      if (audio.addEventListener) {
+        audio.addEventListener('loadedmetadata', done, { once: true });
+        audio.addEventListener('error', done, { once: true });
+      } else {
+        audio.onloadedmetadata = done;
+        audio.onerror = done;
+      }
+
+      if (audio.load) audio.load();
+      setTimeout(done, AUDIO_METADATA_TIMEOUT_MS);
+    });
+  }
+
   function startBackground() {
     const bg = profile.background;
     if (!bg || backgroundAudio) return;
     backgroundAudio = makeAudio(bg.src, { volume: bg.volume ?? 0.25, loop: bg.loop !== false });
     if (!backgroundAudio) return;
-    const started = backgroundAudio.play();
-    if (started && started.catch) started.catch(() => {});
+    playAudio(backgroundAudio);
   }
 
-  function playTransmission() {
+  function startTransmission() {
     const tx = profile.transmission;
-    if (!tx) return 0;
-    const audio = makeAudio(tx.src, { volume: tx.volume ?? 0.8 });
-    if (!audio) return 0;
-    const started = audio.play();
-    if (started && started.catch) started.catch(() => {});
-    return tx.durationMs ?? 900;
+    if (!tx) return null;
+    const audio = makeAudio(tx.src, { volume: tx.volume ?? 0.8, loop: tx.loop !== false });
+    if (!audio) return null;
+    playAudio(audio);
+    return audio;
   }
 
   function unlock() {
@@ -175,13 +222,13 @@ export function createAnnouncer({ getOverlayElements }) {
     return SAMPLE_KEYS[a.kind] || a.kind;
   }
 
-  function playSample(a) {
-    const src = profile.samples && profile.samples[sampleKey(a)];
-    const audio = makeAudio(src, { volume: profile.sampleVolume });
-    if (!audio) return 0;
-    const started = audio.play();
-    if (started && started.catch) started.catch(() => {});
+  function sampleFallbackMs(a) {
     return a.kind === 'tier' && a.count >= 5 ? 900 : 650;
+  }
+
+  function createSample(a) {
+    const src = profile.samples && profile.samples[sampleKey(a)];
+    return makeAudio(src, { volume: profile.sampleVolume });
   }
 
   function playStinger(a) {
@@ -269,18 +316,22 @@ export function createAnnouncer({ getOverlayElements }) {
     const a = queue.shift();
     if (!a) return;
     playing = true;
+    let transmissionAudio = null;
     try {
       showBanner(a);
-      const transmissionMs = playTransmission();
-      const leadMs = transmissionMs ? profile.transmission.leadMs ?? 180 : 0;
+      const sampleAudio = createSample(a);
+      const sampleMs = await measuredAudioMs(sampleAudio, sampleFallbackMs(a));
+      transmissionAudio = startTransmission();
+      const leadMs = transmissionAudio ? profile.transmission.leadMs ?? DEFAULT_TRANSMISSION_LEAD_MS : 0;
       if (leadMs) await new Promise(r => setTimeout(r, leadMs));
-      const sampleMs = playSample(a);
+      playAudio(sampleAudio);
       const stingerMs = playStinger(a);
-      await new Promise(r => setTimeout(r, Math.max(sampleMs, stingerMs, transmissionMs - leadMs)));
+      await new Promise(r => setTimeout(r, Math.max(sampleMs, stingerMs)));
       const aiSpoke = await playAiVoice(a);
       if (!aiSpoke) await speak(a.line);
       await new Promise(r => setTimeout(r, 400));
     } finally {
+      stopAudio(transmissionAudio);
       hideBanners();
       playing = false;
       if (queue.length) setTimeout(playNext, GAP_MS);
