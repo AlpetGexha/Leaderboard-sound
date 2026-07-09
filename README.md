@@ -38,6 +38,24 @@ On Windows, use `npm test` or `node --test`. Do not use `node --test tests/`; ne
 
 The React source lives in `src/`. The production server serves the generated `dist/` directory, so run `npm run build` after frontend changes before using `npm start` for the production build.
 
+## Docker Compose Production
+
+Build and run the production container stack:
+
+```powershell
+docker compose up --build -d
+```
+
+The app will be available at `http://localhost:3000`.
+
+Stop the stack with:
+
+```powershell
+docker compose down
+```
+
+Runtime data is stored in the `ticket_arena_data` Docker volume mounted at `/app/data`, so event history and TTS cache survive container restarts. Runtime secrets such as `FISH_API_KEY` and `WEBHOOK_SECRET` can be provided through `.env`, which Docker Compose loads at runtime without baking it into the image.
+
 ## Webhook Contract
 
 Send ticket events to:

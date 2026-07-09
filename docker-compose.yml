@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ticket_arena_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  ticket_arena_data:

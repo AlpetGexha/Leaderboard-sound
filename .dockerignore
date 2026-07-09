@@ -1,0 +1,9 @@
+node_modules
+data
+.env
+.git
+.gitignore
+docs
+.playwright-cli
+coverage
+npm-debug.log*
