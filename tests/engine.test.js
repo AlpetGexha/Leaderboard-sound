@@ -49,6 +49,36 @@ test('resolves increment count and fire tier announcements at exact milestones',
   assert.strictEqual(publicState(s).leaderboard[0].solved, 15);
 });
 
+test('announcement templates can customize lines with event placeholders', () => {
+  const s = createDay(AGENTS);
+  const r1 = applyEvent(s, ev('ticket.created', 'Ermira', 'T-1', 1000, 'CTF'), {
+    templates: {
+      first_blood: 'Transmission: {name} opened {service} ticket {ticketId}',
+      new_ticket: 'Incoming case for {name}: {service}'
+    }
+  });
+  assert.strictEqual(r1.announcements[0].line, 'Transmission: Ermira opened CTF ticket T-1');
+
+  const r2 = applyEvent(s, ev('ticket.resolved', 'Ermira', 'T-1', 2000, 'CTF'), {
+    tiers: {
+      1: { name: 'FLAG CAPTURED', line: '{name} captured {service} flag {ticketId}' }
+    }
+  });
+  assert.strictEqual(r2.announcements[0].title, 'FLAG CAPTURED');
+  assert.strictEqual(r2.announcements[0].line, 'Ermira captured CTF flag T-1');
+});
+
+test('announcement templates can speak title by agent on service', () => {
+  const s = createDay(AGENTS);
+  const r = applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-9', 3000, 'KFC'), {
+    tiers: {
+      1: { name: 'SOLVED', line: '{title}, By {name} on {service}' }
+    }
+  });
+
+  assert.strictEqual(r.announcements[0].line, 'SOLVED, By Alpet on KFC');
+});
+
 test('a ticketId can only be resolved once (reopens ignored)', () => {
   const s = createDay(AGENTS);
   applyEvent(s, ev('ticket.resolved', 'Bajram', 'T-9', 1000));

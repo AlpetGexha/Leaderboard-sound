@@ -3,5 +3,41 @@
   "timezone": "Europe/Tirane",
   "webhookSecret": "arena-dev-secret",
   "agents": ["Alpet", "Bajram", "Kushtrim", "Mirlind", "Ermira"],
-  "services": ["Billing", "Hosting", "Domains", "Email", "VPN"]
+  "services": ["KFC", "Prishtina MALL", "JYSK", "burgerking", "comoditahome"],
+  "announcements": {
+    "templates": {
+      "first_blood": "{sound}, By {name} on {service}",
+      "new_ticket": "{sound}, By {name} on {service}"
+    },
+    "tiers": {
+      "1": { "name": "SOLVED", "line": "{sound}, By {name} on {service}" },
+      "2": { "name": "DOUBLE KILL", "line": "{sound}, By {name} on {service}" },
+      "3": { "name": "TRIPLE KILL", "line": "{sound}, By {name} on {service}" },
+      "4": { "name": "KILLING SPREE", "line": "{sound}, By {name} on {service}" },
+      "5": { "name": "UNSTOPPABLE", "line": "{sound}, By {name} on {service}" },
+      "7": { "name": "RAMPAGE", "line": "{sound}, By {name} on {service}" },
+      "10": { "name": "DOMINATING", "line": "{sound}, By {name} on {service}" },
+      "15": { "name": "MONSTER KILL", "line": "{sound}, By {name} on {service}" }
+    }
+  },
+  "announcer": {
+    "voice": {
+      "rate": 0.82,
+      "pitch": 0.35,
+      "volume": 1,
+      "preferredVoices": ["Microsoft David", "Google US English", "Daniel", "Alex"]
+    },
+    "transmission": { "src": "/sound/transmission.mp3", "volume": 0.82, "leadMs": 180, "durationMs": 900 },
+    "sampleVolume": 0.92,
+    "samples": {
+      "first_blood": "/sound/First%20Blood.mp3",
+      "double_kill": "/sound/DoubleKill.mp3",
+      "triple_kill": "/sound/TribleKill.mp3",
+      "killing_spree": "/sound/KillingSpree.mp3",
+      "unstoppable": "/sound/Unstaboble.mp3",
+      "rampage": "/sound/RampPage.mp3",
+      "godlike": "/sound/Domanating.mp3",
+      "monster_kill": "/sound/MonsterKill.mp3"
+    }
+  }
 }

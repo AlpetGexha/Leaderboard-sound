@@ -40,7 +40,7 @@ Payload fields:
 - `type`: one of the accepted event types.
 - `agent`: support agent name, matched case-insensitively and stored with canonical config casing.
 - `ticketId`: required, coerced to a trimmed string.
-- `service`: optional, defaults to `General`.
+- `service`: optional company/source name, defaults to `General`.
 
 Example:
 
@@ -48,7 +48,7 @@ Example:
 curl.exe -X POST http://localhost:3000/api/events `
   -H "Content-Type: application/json" `
   -H "X-Webhook-Secret: arena-dev-secret" `
-  -d "{\"type\":\"ticket.resolved\",\"agent\":\"Kushtrim\",\"service\":\"Billing\",\"ticketId\":\"T-1042\"}"
+  -d "{\"type\":\"ticket.resolved\",\"agent\":\"Kushtrim\",\"service\":\"KFC\",\"ticketId\":\"T-1042\"}"
 ```
 
 Responses return `{ "accepted": true }` when the event changed game state. Duplicate created ticket IDs, duplicate resolved ticket IDs, unknown agents, and unknown types are rejected or ignored by the engine.
@@ -61,9 +61,22 @@ Responses return `{ "accepted": true }` when the event changed game state. Dupli
 - `timezone`: timezone used for daily board boundaries, default `Europe/Tirane`.
 - `webhookSecret`: shared secret for `X-Webhook-Secret`.
 - `agents`: leaderboard agents in default display order.
-- `services`: service names shown in the local test panel.
+- `services`: company/source names shown in the local test panel.
+- `announcements`: editable announcement titles and lines. Lines support `{name}`, `{agent}`, `{service}`, `{ticketId}`, `{type}`, and `{count}` placeholders.
+- `announcer`: browser sound profile for voice tuning, background audio, and event sample files.
 
 For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides `config.webhookSecret`.
+
+## Custom Announcer Audio
+
+Local audio files in `sound/` are served under `/sound/...`. The default profile plays `sound/transmission.mp3` as the first cue for each announcement, then starts the mapped event sample while the transmission cue is still playing. Generated WebAudio impacts and the dynamic spoken line follow the same queue.
+
+Edit `config.json` to change the experience:
+
+- `announcer.transmission.src`: lead-in cue, such as `/sound/transmission.mp3`.
+- `announcer.samples`: per-event MP3s. Supported keys include `first_blood`, `new_ticket`, `solved`, `double_kill`, `triple_kill`, `killing_spree`, `unstoppable`, `rampage`, `godlike`, and `monster_kill`.
+- `announcer.voice`: browser text-to-speech tuning for dynamic names and services.
+- `announcements.templates` and `announcements.tiers`: custom lines for ticket and CTF logic using placeholders like `{sound}`, `{title}`, `{name}`, and `{service}`.
 
 ## Local Test Panel
 
@@ -117,4 +130,3 @@ To port the backend to Laravel, keep `public/` unchanged and reimplement the thr
 - Validate and normalize incoming webhooks using the adapter contract.
 - Apply events with the same game-engine rules: first blood, duplicate rejection, resolved counts, tier milestones, feed limit, and tie-break order.
 - Serve `GET /api/state` snapshots and `GET /events` SSE broadcasts in the same format the vanilla frontend already consumes.
-

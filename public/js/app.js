@@ -7,6 +7,7 @@
   const fbChip = document.getElementById('first-blood-chip');
   const connDot = document.getElementById('conn-dot');
   const gate = document.getElementById('unlock-gate');
+  const DEFAULT_SERVICES = ['KFC', 'Prishtina MALL', 'JYSK', 'burgerking', 'comoditahome'];
 
   let lastSolved = {};   // agent -> solved count, to detect who scored
   let testPanelReady = false;
@@ -25,7 +26,8 @@
   function render(snapshot) {
     const { state, day } = snapshot;
     dayLabel.textContent = day;
-    setupTestPanel(snapshot.config);
+    if (snapshot.config && snapshot.config.announcer) Announcer.configure(snapshot.config.announcer);
+    setupTestPanel(snapshot.config, state.leaderboard);
 
     if (state.firstBlood) {
       fbChip.innerHTML = `FIRST BLOOD: <strong>${esc(state.firstBlood.agent)}</strong> on ${esc(state.firstBlood.service)}`;
@@ -110,10 +112,20 @@
   let ticketSeq = Math.floor(Date.now() / 1000) % 100000;
   const openTickets = {}; // agent -> last opened ticketId (so Resolve can close "their" ticket)
 
-  function setupTestPanel(config) {
-    if (testPanelReady || !config) return;
-    serviceSel.innerHTML = config.services.map(s => `<option>${esc(s)}</option>`).join('');
-    grid.innerHTML = config.agents.map(a => `
+  function postTestEvent(payload, secret) {
+    return fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': secret },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  function setupTestPanel(config, leaderboard) {
+    if (testPanelReady) return;
+    const agents = config && config.agents ? config.agents : leaderboard.map(r => r.agent);
+    const services = config && config.services ? config.services : DEFAULT_SERVICES;
+    serviceSel.innerHTML = services.map(s => `<option>${esc(s)}</option>`).join('');
+    grid.innerHTML = agents.map(a => `
       <span class="tp-name">${esc(a)}</span>
       <button data-agent="${esc(a)}" data-type="ticket.created">+ ticket</button>
       <button data-agent="${esc(a)}" data-type="ticket.resolved" class="solve">resolve</button>
@@ -130,11 +142,17 @@
       ticketId = `T-${++ticketSeq}`;
       if (type === 'ticket.created') openTickets[agent] = ticketId;
     }
-    const res = await fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': secretInput.value },
-      body: JSON.stringify({ type, agent, service: serviceSel.value, ticketId })
-    });
+    const payload = { type, agent, service: serviceSel.value, ticketId };
+    let res = await postTestEvent(payload, secretInput.value);
+    if (res.status === 401) {
+      localStorage.removeItem('arena-secret');
+      secretInput.value = 'arena-dev-secret';
+      res = await postTestEvent(payload, secretInput.value);
+      if (res.status === 401) {
+        alert('Test event rejected: bad webhook secret. The server is not using arena-dev-secret.');
+        return;
+      }
+    }
     if (!res.ok) console.warn('test event rejected:', res.status, await res.text());
   }
 
