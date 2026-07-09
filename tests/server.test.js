@@ -33,8 +33,9 @@ function close(server) {
 test('default transmission volume is kept below the event samples', () => {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
 
-  assert.ok(config.announcer.transmission.volume <= 0.6);
+  assert.ok(config.announcer.transmission.volume <= 0.2);
   assert.ok(config.announcer.transmission.volume < config.announcer.sampleVolume);
+  assert.strictEqual(config.announcer.transmission.leadMs, 2000);
 });
 
 test('webhooks after midnight are applied to the new day immediately', async () => {

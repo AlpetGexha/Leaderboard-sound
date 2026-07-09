@@ -14,14 +14,19 @@ npm start
 
 Open `http://localhost:3000`, then click `CLICK TO ARM SPEAKERS`. Browsers require a user gesture before WebAudio and speech playback can start.
 
-For frontend development, run the backend in one terminal and Vite in another:
+For frontend development, run one command:
 
 ```powershell
-npm start
 npm run dev
 ```
 
-Vite serves `http://127.0.0.1:5173` and proxies `/api`, `/events`, and `/sound` to the backend on port `3000`.
+This starts:
+
+- the backend on `http://127.0.0.1:3000`
+- Vite on `http://127.0.0.1:5173`
+- backend dev helpers through `DEV=1`
+
+Vite proxies `/api`, `/events`, and `/sound` to the backend on port `3000`.
 
 Run tests with:
 
@@ -82,14 +87,14 @@ For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides
 
 ## Custom Announcer Audio
 
-Local audio files in `sound/` are served under `/sound/...`. The default profile measures the mapped event sample, starts `sound/transmission.mp3` as a quieter lead-in for 1.5 seconds, then starts the event sample while the transmission cue is still playing. The transmission cue is stopped after the event sample, generated WebAudio impact, and dynamic spoken line finish.
+Local audio files in `sound/` are served under `/sound/...`. The default profile measures the mapped event sample, plays `sound/transmission.mp3` quietly as a 2-second intro, then keeps it underneath the event sample and dynamic spoken line until the announcement ends. Real MP3 samples take priority over browser-generated stingers so the CTF-style callouts stay focused.
 
 Dynamic voice lines are generated server-side through Fish Audio when `FISH_AUDIO_SECRET` or `FISH_API_KEY` is present in `.env`. The browser calls the local `/api/tts` route; it never sees the Fish API key. Generated MP3s are cached in `data/tts-cache/`.
 
 Edit `config.json` to change the experience:
 
 - `announcer.transmission.src`: lead-in cue, such as `/sound/transmission.mp3`.
-- `announcer.transmission.leadMs`: milliseconds to play the transmission cue before the event sample starts. The default is `1500`.
+- `announcer.transmission.leadMs`: milliseconds to play the transmission cue before the event sample starts. The default is `2000`.
 - `announcer.samples`: per-event MP3s. Supported keys include `first_blood`, `new_ticket`, `solved`, `double_kill`, `triple_kill`, `killing_spree`, `unstoppable`, `rampage`, `godlike`, and `monster_kill`.
 - `announcer.tts`: enables Fish-generated voice playback for dynamic names and services.
 - `announcer.voice`: browser text-to-speech fallback tuning if Fish TTS fails.

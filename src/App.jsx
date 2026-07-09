@@ -218,6 +218,7 @@ export default function App() {
   const overlayTitleRef = useRef(null);
   const overlayLineRef = useRef(null);
   const miniRef = useRef(null);
+  const heardAnnouncementIdsRef = useRef(new Set());
 
   const announcer = useMemo(() => createAnnouncer({
     getOverlayElements: () => ({
@@ -260,7 +261,16 @@ export default function App() {
       const msg = JSON.parse(event.data);
       if (msg.dayRolled) lastSolvedRef.current = {};
       applySnapshot(msg);
-      (msg.announcements || []).forEach(item => announcer.enqueue(item));
+      (msg.announcements || []).forEach(item => {
+        const id = item.announcementId || `${item.kind}:${item.ticketId || item.line}:${item.ts || ''}`;
+        if (heardAnnouncementIdsRef.current.has(id)) return;
+        heardAnnouncementIdsRef.current.add(id);
+        if (heardAnnouncementIdsRef.current.size > 200) {
+          const ids = [...heardAnnouncementIdsRef.current];
+          heardAnnouncementIdsRef.current = new Set(ids.slice(-100));
+        }
+        announcer.enqueue(item);
+      });
     };
     return () => {
       cancelled = true;

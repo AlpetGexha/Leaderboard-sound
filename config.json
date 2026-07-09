@@ -27,7 +27,7 @@
       "volume": 1,
       "preferredVoices": ["Microsoft David", "Google US English", "Daniel", "Alex"]
     },
-    "transmission": { "src": "/sound/transmission.mp3", "volume": 0.55, "leadMs": 1500, "durationMs": 900 },
+    "transmission": { "src": "/sound/transmission.mp3", "volume": 0.15, "leadMs": 2000, "durationMs": 900 },
     "tts": { "enabled": true, "volume": 1, "timeoutMs": 9000 },
     "sampleVolume": 0.92,
     "samples": {

@@ -20,9 +20,12 @@ test('first created ticket of the day is FIRST BLOOD, later ones are new_ticket'
   const r1 = applyEvent(s, ev('ticket.created', 'Ermira', 'T-1', 1000));
   assert.strictEqual(r1.accepted, true);
   assert.strictEqual(r1.announcements[0].kind, 'first_blood');
+  assert.strictEqual(r1.announcements[0].announcementId, 'e1:first_blood');
+  assert.strictEqual(r1.announcements[0].ticketId, 'T-1');
   assert.match(r1.announcements[0].line, /First blood on Billing by Ermira/i);
   const r2 = applyEvent(s, ev('ticket.created', 'Alpet', 'T-2', 2000));
   assert.strictEqual(r2.announcements[0].kind, 'new_ticket');
+  assert.strictEqual(r2.announcements[0].announcementId, 'e2:new_ticket');
   assert.match(r2.announcements[0].line, /New ticket by Alpet/i);
   assert.deepStrictEqual(publicState(s).firstBlood, { agent: 'Ermira', service: 'Billing', ts: 1000 });
 });
@@ -70,13 +73,15 @@ test('announcement templates can customize lines with event placeholders', () =>
 
 test('announcement templates can speak title by agent on service', () => {
   const s = createDay(AGENTS);
-  const r = applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-9', 3000, 'KFC'), {
+  const event = ev('ticket.resolved', 'Alpet', 'T-9', 3000, 'KFC');
+  const r = applyEvent(s, event, {
     tiers: {
       1: { name: 'SOLVED', line: '{title}, By {name} on {service}' }
     }
   });
 
   assert.strictEqual(r.announcements[0].line, 'SOLVED, By Alpet on KFC');
+  assert.strictEqual(r.announcements[0].announcementId, `${event.id}:tier:1`);
 });
 
 test('a ticketId can only be resolved once (reopens ignored)', () => {

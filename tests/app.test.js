@@ -70,3 +70,58 @@ test('test panel retries once with default secret after a stale saved secret is 
   assert.strictEqual(calls[1].options.headers['X-Webhook-Secret'], 'arena-dev-secret');
   assert.strictEqual(window.localStorage.getItem('arena-secret'), null);
 });
+
+test('duplicate live announcements with the same announcementId are only played once', async () => {
+  const snapshot = {
+    ...DEFAULT_SNAPSHOT,
+    config: {
+      agents: ['Alpet', 'Bajram'],
+      services: ['KFC'],
+      announcer: {
+        transmission: { src: '/sound/transmission.mp3', leadMs: 1 },
+        tts: { enabled: false }
+      }
+    }
+  };
+  const played = [];
+  global.Audio = global.window.Audio = class {
+    constructor(src) {
+      this.src = src;
+      this.volume = 1;
+      this.loop = false;
+    }
+    play() {
+      played.push(this.src);
+      return Promise.resolve();
+    }
+    pause() {}
+    load() {}
+  };
+
+  await renderApp(snapshot, {
+    fetch(url) {
+      if (url === '/api/state') return Promise.resolve({ json: () => Promise.resolve(snapshot) });
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('ok') });
+    }
+  });
+
+  fireEvent.click(await screen.findByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
+
+  const payload = {
+    ...snapshot,
+    announcements: [{
+      announcementId: 'evt-1:new_ticket',
+      eventId: 'evt-1',
+      ticketId: 'T-1',
+      ts: 1000,
+      kind: 'new_ticket',
+      title: 'NEW TICKET',
+      line: 'NEW TICKET, By Alpet on KFC'
+    }]
+  };
+
+  global.EventSource.instances[0].onmessage({ data: JSON.stringify(payload) });
+  global.EventSource.instances[0].onmessage({ data: JSON.stringify(payload) });
+
+  await waitFor(() => assert.deepStrictEqual(played, ['/sound/transmission.mp3']));
+});

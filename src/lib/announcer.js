@@ -1,6 +1,6 @@
-const GAP_MS = 1200;
+const GAP_MS = 2000;
 const SPEECH_TIMEOUT_MS = 8000;
-const DEFAULT_TRANSMISSION_LEAD_MS = 1500;
+const DEFAULT_TRANSMISSION_LEAD_MS = 2000;
 const AUDIO_METADATA_TIMEOUT_MS = 300;
 
 const DEFAULT_PROFILE = {
@@ -133,7 +133,7 @@ export function createAnnouncer({ getOverlayElements }) {
   function startTransmission() {
     const tx = profile.transmission;
     if (!tx) return null;
-    const audio = makeAudio(tx.src, { volume: tx.volume ?? 0.8, loop: tx.loop !== false });
+    const audio = makeAudio(tx.src, { volume: tx.volume ?? 0.15, loop: tx.loop !== false });
     if (!audio) return null;
     playAudio(audio);
     return audio;
@@ -145,10 +145,6 @@ export function createAnnouncer({ getOverlayElements }) {
     if (AudioContext && !ctx) ctx = new AudioContext();
     if (ctx && ctx.resume) ctx.resume();
     startBackground();
-    if (!win.speechSynthesis || !win.SpeechSynthesisUtterance) return;
-    const u = new win.SpeechSynthesisUtterance('');
-    u.volume = 0;
-    win.speechSynthesis.speak(u);
   }
 
   function tone(freq, start, dur, { type = 'square', gain = 0.18, slideTo = null } = {}) {
@@ -231,39 +227,25 @@ export function createAnnouncer({ getOverlayElements }) {
     return makeAudio(src, { volume: profile.sampleVolume });
   }
 
-  function playStinger(a) {
+  function voiceLine(a, hasSample) {
+    if (!hasSample) return a.line || '';
+    if (!a.title || !a.line) return a.line || '';
+    const prefix = `${a.title}, `;
+    return a.line.startsWith(prefix) ? a.line.slice(prefix.length) : a.line;
+  }
+
+  function playStinger(a, hasSample) {
     if (!ctx) return 0;
+    if (hasSample) return 0;
     if (a.kind === 'first_blood') return stingers.firstBlood();
-    if (a.kind === 'new_ticket') return stingers.blip();
+    if (a.kind === 'new_ticket') return 0;
     if (a.kind === 'tier') return a.count >= 2 ? stingers.tier(a.count) : stingers.solved();
     return 0;
   }
 
-  function speak(line) {
-    return new Promise(resolve => {
-      const win = getWindow();
-      if (!win.speechSynthesis || !win.SpeechSynthesisUtterance) return setTimeout(resolve, 2000);
-      const u = new win.SpeechSynthesisUtterance(line);
-      u.rate = profile.voice.rate;
-      u.pitch = profile.voice.pitch;
-      u.volume = profile.voice.volume;
-      const voices = win.speechSynthesis.getVoices();
-      const preferred = profile.voice.preferredVoices || [];
-      const chosen = preferred
-        .map(name => voices.find(v => v.name && v.name.toLowerCase().includes(name.toLowerCase())))
-        .find(Boolean) || voices.find(v => v.lang && v.lang.startsWith('en'));
-      if (chosen) u.voice = chosen;
-      const done = () => { clearTimeout(timer); resolve(); };
-      const timer = setTimeout(done, SPEECH_TIMEOUT_MS);
-      u.onend = done;
-      u.onerror = done;
-      win.speechSynthesis.speak(u);
-    });
-  }
-
-  function ttsUrl(a) {
+  function ttsUrl(a, hasSample) {
     const params = new URLSearchParams({
-      text: a.line || '',
+      text: voiceLine(a, hasSample),
       kind: a.kind || '',
       title: a.title || ''
     });
@@ -271,10 +253,12 @@ export function createAnnouncer({ getOverlayElements }) {
     return `/api/tts?${params.toString()}`;
   }
 
-  function playAiVoice(a) {
+  function playAiVoice(a, hasSample) {
     return new Promise(resolve => {
       if (!profile.tts || !profile.tts.enabled) return resolve(false);
-      const audio = makeAudio(ttsUrl(a), { volume: profile.tts.volume ?? 1 });
+      const text = voiceLine(a, hasSample);
+      if (!text) return resolve(false);
+      const audio = makeAudio(ttsUrl(a, hasSample), { volume: profile.tts.volume ?? 1 });
       if (!audio) return resolve(false);
       let finished = false;
       const done = ok => {
@@ -320,15 +304,15 @@ export function createAnnouncer({ getOverlayElements }) {
     try {
       showBanner(a);
       const sampleAudio = createSample(a);
+      const hasSample = Boolean(sampleAudio);
       const sampleMs = await measuredAudioMs(sampleAudio, sampleFallbackMs(a));
       transmissionAudio = startTransmission();
       const leadMs = transmissionAudio ? profile.transmission.leadMs ?? DEFAULT_TRANSMISSION_LEAD_MS : 0;
       if (leadMs) await new Promise(r => setTimeout(r, leadMs));
       playAudio(sampleAudio);
-      const stingerMs = playStinger(a);
+      const stingerMs = playStinger(a, hasSample);
       await new Promise(r => setTimeout(r, Math.max(sampleMs, stingerMs)));
-      const aiSpoke = await playAiVoice(a);
-      if (!aiSpoke) await speak(a.line);
+      await playAiVoice(a, hasSample);
       await new Promise(r => setTimeout(r, 400));
     } finally {
       stopAudio(transmissionAudio);
