@@ -58,7 +58,7 @@ src/
 
 **Guard** — `createDedupeGuard` (the stateful LRU), `isBigAnnouncement`, and `canSpeak` on the frontend. On the backend, `webhookSecretGuard`, `devOnlyGuard`, and `jsonBodyGuard`, declared per route. `adapter.parseWebhook` is already a guard and stays as one.
 
-**SRP** — the announcer's six jobs become ten modules averaging roughly forty lines, each with one reason to change.
+**SRP** — the announcer's six jobs become nine modules under `src/services/`, each averaging roughly forty lines and each with one reason to change.
 
 Beyond the four patterns named in the goal, three more fit:
 
@@ -108,4 +108,4 @@ Phases 1 through 5 are frontend and land first. Phase 6 is independently mergeab
 
 ## Success Criteria
 
-`App.jsx` drops from 347 lines to composition only. `announcer.js` becomes ten focused modules. `npm test` passes at every one of the six commits. No production behavior changes except the `JSON.parse` hardening in `eventStream.js`.
+`App.jsx` drops from 347 lines to composition only. `announcer.js` becomes nine focused modules. `npm test` passes at every one of the six commits. No production behavior changes except the `JSON.parse` hardening in `eventStream.js`.
