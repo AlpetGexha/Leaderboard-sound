@@ -41,8 +41,20 @@ test('measuredAudioMs returns 0 for a missing audio element', async () => {
 
 test('measuredAudioMs falls back after the metadata timeout', async () => {
   const { measuredAudioMs } = await import('../src/services/audio/audioElement.js');
+  // Neither handler ever fires, so only the 300ms timeout can settle this.
   const audio = { duration: NaN, addEventListener() {}, load() {} };
-  assert.strictEqual(await measuredAudioMs(audio, 777), 777);
+
+  const started = Date.now();
+  const result = await measuredAudioMs(audio, 777);
+  const elapsed = Date.now() - started;
+
+  assert.strictEqual(result, 777);
+  // Wall-clock bounds, deliberately wide so a loaded machine cannot flake them.
+  // The lower bound catches a timeout that resolves immediately; the upper bound
+  // catches a regression to a much longer timeout, which would add dead air
+  // before every sample whose metadata never loads.
+  assert.ok(elapsed >= 250, `expected to wait for the ~300ms metadata timeout, waited ${elapsed}ms`);
+  assert.ok(elapsed < 1500, `expected the ~300ms metadata timeout, waited ${elapsed}ms`);
 });
 
 test('playAudio swallows a rejected play promise and reports that it started', async () => {
