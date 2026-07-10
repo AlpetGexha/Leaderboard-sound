@@ -18,14 +18,34 @@ test('dedupe guard reports the first sighting as new and repeats as duplicate', 
   assert.strictEqual(isDuplicate(a), true);
 });
 
-test('dedupe guard trims to the newest 100 once it passes 200 entries', async () => {
+test('dedupe guard pins the cap to 200 entries and trims to the newest 100', async () => {
   const { createDedupeGuard } = await import('../src/guards/announcementGuards.js');
-  const isDuplicate = createDedupeGuard();
-  for (let i = 0; i < 201; i++) isDuplicate({ announcementId: `id-${i}` });
-  // id-0 was evicted by the trim, so it now reads as new again.
-  assert.strictEqual(isDuplicate({ announcementId: 'id-0' }), false);
-  // id-200 is inside the retained window.
-  assert.strictEqual(isDuplicate({ announcementId: 'id-200' }), true);
+
+  // NOTE: isDuplicate MUTATES the guard's set. Probing an id that is NOT present
+  // re-inserts it (and could itself push size past the cap and trigger a trim);
+  // probing an id that IS present is a pure read. Each probe below is ordered so
+  // it cannot corrupt a later assertion.
+
+  // --- Pin `max` at 200: exactly 200 entries must NOT have triggered a trim yet. ---
+  const atCap = createDedupeGuard();
+  for (let i = 0; i < 200; i++) atCap({ announcementId: `id-${i}` }); // size === 200, not > 200
+  // No trim has happened, so the very first id is still retained.
+  // (Fails for any max < 200, where id-0 would already have been evicted.)
+  assert.strictEqual(atCap({ announcementId: 'id-0' }), true);
+
+  // --- Pin `keep` at 100: the 201st entry triggers a trim to the newest 100. ---
+  const overCap = createDedupeGuard();
+  for (let i = 0; i < 201; i++) overCap({ announcementId: `id-${i}` });
+  // The trim retained id-101..id-200 (the last 100 entries).
+  // id-100 was evicted -> reads NEW. (Fails for any keep > 100.)
+  // This probe re-inserts id-100, but that cannot revive id-101, so what follows is safe.
+  assert.strictEqual(overCap({ announcementId: 'id-100' }), false);
+  // id-101 is the oldest retained entry -> still a DUPLICATE. (Fails for any keep < 100.)
+  assert.strictEqual(overCap({ announcementId: 'id-101' }), true);
+  // id-200 is the newest entry -> DUPLICATE.
+  assert.strictEqual(overCap({ announcementId: 'id-200' }), true);
+  // id-0 was evicted long ago -> reads NEW again.
+  assert.strictEqual(overCap({ announcementId: 'id-0' }), false);
 });
 
 test('isBigAnnouncement selects the fullscreen overlay', async () => {
