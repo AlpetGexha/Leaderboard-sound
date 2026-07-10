@@ -143,3 +143,17 @@ test('selectStinger suppresses generated audio when a sample exists', async () =
   assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 3 }, false)(), 860);
   assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 1 }, false)(), 480);
 });
+
+test('createSample builds an audio element only when the profile maps the key', async () => {
+  const { createSample } = await import('../src/services/audio/samples.js');
+  global.window = { Audio: class { constructor(src) { this.src = src; } } };
+
+  const profile = { samples: { double_kill: '/sound/DoubleKill.mp3' }, sampleVolume: 0.9 };
+  const audio = createSample({ kind: 'tier', count: 2 }, profile);
+  assert.strictEqual(audio.src, '/sound/DoubleKill.mp3');
+  assert.strictEqual(audio.volume, 0.9);
+
+  assert.strictEqual(createSample({ kind: 'tier', count: 3 }, profile), null);
+  assert.strictEqual(createSample({ kind: 'tier', count: 2 }, { samples: {} }), null);
+  delete global.window;
+});
