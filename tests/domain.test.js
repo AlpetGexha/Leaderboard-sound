@@ -25,3 +25,28 @@ test('agentsFrom prefers config, then derives from the leaderboard', async () =>
   );
   assert.deepStrictEqual(agentsFrom(null), []);
 });
+
+test('sampleKey maps tier counts and kinds onto sample names', async () => {
+  const { sampleKey } = await import('../src/domain/announcement.js');
+  assert.strictEqual(sampleKey({ kind: 'tier', count: 1 }), 'solved');
+  assert.strictEqual(sampleKey({ kind: 'tier', count: 15 }), 'monster_kill');
+  assert.strictEqual(sampleKey({ kind: 'tier', count: 6 }), 'tier_6');
+  assert.strictEqual(sampleKey({ kind: 'first_blood' }), 'first_blood');
+  assert.strictEqual(sampleKey({ kind: 'new_ticket' }), 'new_ticket');
+});
+
+test('sampleFallbackMs is longer for high tiers', async () => {
+  const { sampleFallbackMs } = await import('../src/domain/announcement.js');
+  assert.strictEqual(sampleFallbackMs({ kind: 'tier', count: 5 }), 900);
+  assert.strictEqual(sampleFallbackMs({ kind: 'tier', count: 2 }), 650);
+  assert.strictEqual(sampleFallbackMs({ kind: 'first_blood' }), 650);
+});
+
+test('voiceLine strips the title prefix only when a sample already speaks it', async () => {
+  const { voiceLine } = await import('../src/domain/announcement.js');
+  const a = { title: 'DOUBLE KILL', line: 'DOUBLE KILL, Alpet' };
+  assert.strictEqual(voiceLine(a, true), 'Alpet');
+  assert.strictEqual(voiceLine(a, false), 'DOUBLE KILL, Alpet');
+  assert.strictEqual(voiceLine({ line: 'no title' }, true), 'no title');
+  assert.strictEqual(voiceLine({ title: 'X' }, true), '');
+});
