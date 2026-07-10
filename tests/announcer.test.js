@@ -2,23 +2,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-function elements() {
-  const make = () => ({
-    textContent: '',
-    classList: {
-      add() {},
-      remove() {},
-      toggle() {}
-    }
-  });
-  return {
-    overlay: make(),
-    overlayTitle: make(),
-    overlayLine: make(),
-    mini: make()
-  };
-}
-
 function installAudioContext() {
   global.window = global.window || {};
   global.window.AudioContext = class {
@@ -68,10 +51,9 @@ async function loadAnnouncer(overrides = {}) {
   global.window.SpeechSynthesisUtterance = overrides.SpeechSynthesisUtterance;
   global.Audio = overrides.Audio;
   global.window.Audio = overrides.Audio;
-  const announcerModule = await import('../src/lib/announcer.js');
+  const announcerModule = await import('../src/services/announcer/createAnnouncer.js');
   const createAnnouncer = announcerModule.createAnnouncer || announcerModule.default.createAnnouncer;
-  const nodes = elements();
-  return createAnnouncer({ getOverlayElements: () => nodes });
+  return createAnnouncer({ onShow: () => {}, onHide: () => {} });
 }
 
 test('unlock does not throw when speech synthesis is unavailable', async () => {

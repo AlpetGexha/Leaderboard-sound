@@ -1,5 +1,25 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createAnnouncer } from './lib/announcer.js';
+import { createAnnouncer } from './services/announcer/createAnnouncer.js';
+
+// Temporary bridge: keeps the DOM banners working until hooks and components
+// land in Phase 5, which deletes these along with the four refs.
+function showBannerImperative(a, refs) {
+  const big = a.kind === 'first_blood' || (a.kind === 'tier' && a.count >= 2);
+  if (big && refs.overlayRef.current && refs.overlayTitleRef.current && refs.overlayLineRef.current) {
+    refs.overlayTitleRef.current.textContent = a.title;
+    refs.overlayLineRef.current.textContent = a.line;
+    refs.overlayRef.current.classList.toggle('gold', a.kind === 'tier' && a.count >= 5);
+    refs.overlayRef.current.classList.remove('hidden');
+  } else if (refs.miniRef.current) {
+    refs.miniRef.current.textContent = `${a.title} - ${a.line}`;
+    refs.miniRef.current.classList.remove('hidden');
+  }
+}
+
+function hideBannersImperative(refs) {
+  if (refs.overlayRef.current) refs.overlayRef.current.classList.add('hidden');
+  if (refs.miniRef.current) refs.miniRef.current.classList.add('hidden');
+}
 
 const DEFAULT_SERVICES = ['KFC', 'Prishtina MALL', 'JYSK', 'burgerking', 'comoditahome'];
 const EMPTY_STATE = { leaderboard: [], firstBlood: null, feed: [] };
@@ -221,12 +241,8 @@ export default function App() {
   const heardAnnouncementIdsRef = useRef(new Set());
 
   const announcer = useMemo(() => createAnnouncer({
-    getOverlayElements: () => ({
-      overlay: overlayRef.current,
-      overlayTitle: overlayTitleRef.current,
-      overlayLine: overlayLineRef.current,
-      mini: miniRef.current
-    })
+    onShow: a => showBannerImperative(a, { overlayRef, overlayTitleRef, overlayLineRef, miniRef }),
+    onHide: () => hideBannersImperative({ overlayRef, miniRef })
   }), []);
 
   const captureOldTops = useCallback(() => {
