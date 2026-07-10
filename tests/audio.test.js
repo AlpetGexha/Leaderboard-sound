@@ -59,3 +59,55 @@ test('stopAudio tolerates a read-only currentTime', async () => {
   assert.doesNotThrow(() => stopAudio(audio));
   assert.strictEqual(paused, true);
 });
+
+test('audioContext is not ready until resume, and tone is a no-op before that', async () => {
+  const { createAudioContext } = await import('../src/services/audio/audioContext.js');
+  let constructed = 0;
+  global.window = {
+    AudioContext: class {
+      constructor() {
+        constructed += 1;
+        this.currentTime = 0;
+        this.sampleRate = 44100;
+        this.destination = {};
+      }
+      resume() {}
+      createOscillator() {
+        return {
+          frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+          connect() { return this; }, start() {}, stop() {}
+        };
+      }
+      createGain() {
+        return {
+          gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
+          connect() { return this; }
+        };
+      }
+    }
+  };
+
+  const engine = createAudioContext();
+  assert.strictEqual(engine.isReady(), false);
+  assert.doesNotThrow(() => engine.tone(440, 0, 0.1));
+  assert.strictEqual(constructed, 0);
+
+  engine.resume();
+  assert.strictEqual(engine.isReady(), true);
+  assert.strictEqual(constructed, 1);
+
+  engine.resume();
+  assert.strictEqual(constructed, 1, 'resume must not construct a second context');
+
+  assert.doesNotThrow(() => engine.tone(440, 0, 0.1, { slideTo: 220 }));
+  delete global.window;
+});
+
+test('createAudioContext survives a browser with no AudioContext', async () => {
+  const { createAudioContext } = await import('../src/services/audio/audioContext.js');
+  global.window = {};
+  const engine = createAudioContext();
+  assert.doesNotThrow(() => engine.resume());
+  assert.strictEqual(engine.isReady(), false);
+  delete global.window;
+});
