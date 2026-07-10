@@ -103,6 +103,14 @@ Responses return `{ "accepted": true }` when the event changed game state. Dupli
 
 For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides `config.webhookSecret`.
 
+## Architecture
+
+The frontend is layered. `src/domain/` holds pure helpers, `src/guards/` holds predicates that gate effects, `src/services/` wraps browser APIs and the backend transport, `src/actions/` holds one exported function per user intent, and `src/hooks/` adapts services to React. `src/App.jsx` is composition only.
+
+`src/services/announcer/createAnnouncer.js` is a composition root: it wires the audio adapters under `src/services/audio/` and emits `onShow`/`onHide` instead of touching the DOM. Banners render from React state.
+
+The backend mirrors this. `lib/server/router.js` maps method and path onto a route, each route declares its guards, and each route's action is one file. `lib/http-server.js` is a re-export kept as the stable import path. `lib/engine.js`, `lib/adapter.js`, and `lib/store.js` remain the domain core.
+
 ## Custom Announcer Audio
 
 Local audio files in `sound/` are served under `/sound/...`. The default profile measures the mapped event sample, plays `sound/transmission.mp3` quietly as a 2-second intro, then keeps it underneath the event sample and dynamic spoken line until the announcement ends. Real MP3 samples take priority over browser-generated stingers so the CTF-style callouts stay focused.
