@@ -111,3 +111,35 @@ test('createAudioContext survives a browser with no AudioContext', async () => {
   assert.strictEqual(engine.isReady(), false);
   delete global.window;
 });
+
+test('stingers return their advertised durations', async () => {
+  const { createStingers } = await import('../src/services/audio/stingers.js');
+  const calls = [];
+  const engine = {
+    isReady: () => true,
+    tone: (...args) => calls.push(['tone', ...args]),
+    noiseHit: (...args) => calls.push(['noise', ...args])
+  };
+  const stingers = createStingers(engine);
+
+  assert.strictEqual(stingers.blip(), 260);
+  assert.strictEqual(stingers.solved(), 480);
+  assert.strictEqual(stingers.firstBlood(), 1400);
+  // tier(2): endAt = 0.08 + 2 * 0.09 = 0.26 -> round((0.26 + 0.6) * 1000) = 860
+  assert.strictEqual(stingers.tier(2), 860);
+  // tier(10) clamps notes to 8: endAt = 0.08 + 8 * 0.09 = 0.80 -> 1400
+  assert.strictEqual(stingers.tier(10), 1400);
+  assert.ok(calls.length > 0);
+});
+
+test('selectStinger suppresses generated audio when a sample exists', async () => {
+  const { selectStinger } = await import('../src/services/audio/stingers.js');
+  const stingers = { firstBlood: () => 1400, tier: () => 860, solved: () => 480 };
+
+  assert.strictEqual(selectStinger(stingers, { kind: 'first_blood' }, true), null);
+  assert.strictEqual(selectStinger(stingers, { kind: 'new_ticket' }, false), null);
+  assert.strictEqual(selectStinger(stingers, { kind: 'unknown' }, false), null);
+  assert.strictEqual(selectStinger(stingers, { kind: 'first_blood' }, false)(), 1400);
+  assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 3 }, false)(), 860);
+  assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 1 }, false)(), 480);
+});
