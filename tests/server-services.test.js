@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { createArenaState } = require('../lib/server/services/arenaState');
+const { createArenaState, configuredMinutes } = require('../lib/server/services/arenaState');
 const { createSseHub } = require('../lib/server/services/sseHub');
 
 const CONFIG = {
@@ -134,4 +134,39 @@ test('broadcast survives a client whose write throws and still reaches the other
 
   hub.broadcast({ day: 'y' });
   assert.strictEqual(good.length, 2);
+});
+
+test('feature flags default true and explicit false is exposed', () => {
+  const defaults = createArenaState({ config: CONFIG, store: memoryStore(), now: () => 0, logger: silentLogger });
+  assert.deepStrictEqual(defaults.snapshot().config.features, {
+    inboxInvasion: true, comebackAnnouncements: true, endOfDayAwards: true
+  });
+  const config = { ...CONFIG, features: { inboxInvasion: false, comebackAnnouncements: false, endOfDayAwards: false } };
+  const off = createArenaState({ config, store: memoryStore(), now: () => 0, logger: silentLogger });
+  assert.deepStrictEqual(off.snapshot().config.features, config.features);
+  assert.strictEqual(off.snapshot().ceremony, null);
+});
+
+test('awards freeze pre-closing events and reconstruct after restart', () => {
+  const before = Date.UTC(2026, 6, 11, 16, 59);
+  const closing = Date.UTC(2026, 6, 11, 17, 0);
+  const events = [
+    { id: 'e1', type: 'ticket.created', agent: 'Alpet', service: 'KFC', ticketId: 'T1', ts: before - 1000 },
+    { id: 'e2', type: 'ticket.resolved', agent: 'Alpet', service: 'KFC', ticketId: 'T1', ts: before },
+    { id: 'e3', type: 'ticket.resolved', agent: 'Bajram', service: 'KFC', ticketId: 'T2', ts: closing + 1000 }
+  ];
+  const config = { ...CONFIG, featureSettings: { awardsTime: '17:00' } };
+  const arena = createArenaState({ config, store: memoryStore(events), now: () => closing, logger: silentLogger });
+  const ceremony = arena.snapshot().ceremony;
+  assert.strictEqual(ceremony.id, 'awards:2026-07-11');
+  assert.strictEqual(ceremony.awards.find(item => item.key === 'mvp').winner, 'Alpet');
+  assert.strictEqual(arena.snapshot().state.leaderboard.find(item => item.agent === 'Bajram').solved, 1);
+  assert.strictEqual(arena.ensureCeremony(), false, 'a ceremony is created once per day');
+});
+
+test('invalid awards times fall back to 17:00', () => {
+  assert.strictEqual(configuredMinutes('17:00'), 17 * 60);
+  assert.strictEqual(configuredMinutes('24:00'), 17 * 60);
+  assert.strictEqual(configuredMinutes('12:99'), 17 * 60);
+  assert.strictEqual(configuredMinutes('not-a-time'), 17 * 60);
 });

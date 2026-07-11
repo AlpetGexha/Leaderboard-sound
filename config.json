@@ -4,7 +4,28 @@
   "webhookSecret": "arena-dev-secret",
   "agents": ["Alpet", "Bajram", "Kushtrim", "Mirlind", "Ermira"],
   "services": ["KFC", "Prishtina MALL", "JYSK", "burgerking", "comoditahome"],
+  "features": {
+    "inboxInvasion": true,
+    "comebackAnnouncements": true,
+    "endOfDayAwards": true
+  },
+  "featureSettings": {
+    "comebackCooldownSeconds": 60,
+    "awardsTime": "17:00"
+  },
   "announcements": {
+    "comebacks": {
+      "crown": "{name} has stolen the crown!",
+      "basement": "{name} has escaped the basement!",
+      "climbing": "{name} is climbing the leaderboard!"
+    },
+    "awards": {
+      "mvp": "{winner} is today's MVP! {detail}",
+      "firstBlood": "{winner} wins First Blood! {detail}",
+      "comebackPlayer": "{winner} is the Comeback Player! {detail}",
+      "serviceSpecialist": "{winner} is the Service Specialist! {detail}",
+      "inboxSlayer": "{winner} is the Inbox Slayer! {detail}"
+    },
     "templates": {
       "first_blood": "{sound}, By {name} on {service}",
       "new_ticket": "{sound}, By {name} on {service}"

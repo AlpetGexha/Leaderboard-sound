@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { EMPTY_STATE } from './domain/snapshot.js';
-import { isBigAnnouncement } from './guards/announcementGuards.js';
+import { isBigAnnouncement, isSolveAnnouncement } from './guards/announcementGuards.js';
 import { useAnnouncementQueue } from './hooks/useAnnouncementQueue.js';
 import { useArenaSnapshot } from './hooks/useArenaSnapshot.js';
 import { useFlipAnimation } from './hooks/useFlipAnimation.js';
@@ -12,10 +12,14 @@ import { UnlockGate } from './components/UnlockGate.jsx';
 import { AnnouncementOverlay } from './components/AnnouncementOverlay.jsx';
 import { MiniBanner } from './components/MiniBanner.jsx';
 import { TestPanel } from './components/TestPanel/TestPanel.jsx';
+import { InboxInvasion } from './components/InboxInvasion.jsx';
+import { SolvePopup } from './components/SolvePopup.jsx';
+
+const EMPTY_EFFECTS = [];
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
-  const { announcer, current, ingestFrame } = useAnnouncementQueue();
+  const { announcer, current, ingestFrame, unlock: unlockAnnouncer } = useAnnouncementQueue();
   const { rowRefs, captureOldTops, applyFlip } = useFlipAnimation();
   const { scoredAgents, clearScored, resetScores, syncSolved } = useScoreFlash();
 
@@ -40,27 +44,33 @@ export default function App() {
   const state = snapshot?.state || EMPTY_STATE;
 
   function unlock() {
-    announcer.unlock();
+    unlockAnnouncer();
     setUnlocked(true);
   }
 
   return (
     <>
       <UnlockGate unlocked={unlocked} onUnlock={unlock} />
-      <Header snapshot={snapshot} live={live} />
-      <main>
-        <Leaderboard
-          rows={state.leaderboard}
-          rowRefs={rowRefs}
-          scoredAgents={scoredAgents}
-          onScoreAnimationEnd={clearScored}
-        />
-        <KillFeed feed={state.feed} />
-      </main>
-      {current && (isBigAnnouncement(current)
-        ? <AnnouncementOverlay announcement={current} />
-        : <MiniBanner announcement={current} />)}
-      <TestPanel snapshot={snapshot} />
+      <div className="dashboard-shell" inert={!unlocked ? true : undefined} aria-hidden={!unlocked}>
+        <Header snapshot={snapshot} live={live} />
+        {snapshot?.config?.features?.inboxInvasion !== false
+          ? <InboxInvasion invasion={state.invasion} effects={snapshot?.effects || EMPTY_EFFECTS} /> : null}
+        <main>
+          <Leaderboard
+            rows={state.leaderboard}
+            rowRefs={rowRefs}
+            scoredAgents={scoredAgents}
+            onScoreAnimationEnd={clearScored}
+          />
+          <KillFeed feed={state.feed} />
+        </main>
+        {current ? (isBigAnnouncement(current)
+          ? <AnnouncementOverlay announcement={current} />
+          : isSolveAnnouncement(current)
+            ? <SolvePopup announcement={current} />
+            : <MiniBanner announcement={current} />) : null}
+        <TestPanel snapshot={snapshot} />
+      </div>
     </>
   );
 }

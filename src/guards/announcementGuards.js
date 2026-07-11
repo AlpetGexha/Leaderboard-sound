@@ -20,7 +20,11 @@ export function createDedupeGuard({ max = SEEN_MAX, keep = SEEN_KEEP } = {}) {
 
 export function isBigAnnouncement(a) {
   if (!a) return false;
-  return a.kind === 'first_blood' || (a.kind === 'tier' && a.count >= 2);
+  return a.kind === 'first_blood' || a.kind === 'award' || (a.kind === 'tier' && a.count >= 2);
+}
+
+export function isSolveAnnouncement(a) {
+  return Boolean(a && a.kind === 'tier' && a.count === 1);
 }
 
 export function canSpeak(profile, text) {

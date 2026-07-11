@@ -10,7 +10,8 @@ export function Header({ snapshot, live }) {
         <span className={`fb-chip ${firstBlood ? '' : 'hidden'}`}>
           {firstBlood ? <>FIRST BLOOD: <strong>{firstBlood.agent}</strong> on {firstBlood.service}</> : null}
         </span>
-        <span className={`conn-dot ${live ? 'live' : ''}`} title="live connection" />
+        <span className={`conn-dot ${live ? 'live' : ''}`} role="status"
+          aria-label={live ? 'Live connection' : 'Connection offline'} title={live ? 'Live connection' : 'Connection offline'} />
       </div>
     </header>
   );

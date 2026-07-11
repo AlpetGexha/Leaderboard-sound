@@ -57,6 +57,13 @@ test('isBigAnnouncement selects the fullscreen overlay', async () => {
   assert.strictEqual(isBigAnnouncement(null), false);
 });
 
+test('isSolveAnnouncement selects only the first resolved-ticket tier', async () => {
+  const { isSolveAnnouncement } = await import('../src/guards/announcementGuards.js');
+  assert.strictEqual(isSolveAnnouncement({ kind: 'tier', count: 1 }), true);
+  assert.strictEqual(isSolveAnnouncement({ kind: 'tier', count: 2 }), false);
+  assert.strictEqual(isSolveAnnouncement({ kind: 'new_ticket' }), false);
+});
+
 test('canSpeak requires tts enabled and non-empty text', async () => {
   const { canSpeak } = await import('../src/guards/announcementGuards.js');
   assert.strictEqual(canSpeak({ tts: { enabled: true } }, 'hi'), true);

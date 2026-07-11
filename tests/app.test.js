@@ -38,7 +38,7 @@ test('renders the snapshot leaderboard and fallback test panel options', async (
 
   assert.ok((await screen.findAllByText('Alpet')).length >= 1);
   assert.ok(screen.getAllByText('Bajram').length >= 1);
-  assert.ok(screen.getByText('CLICK TO ARM SPEAKERS'));
+  fireEvent.click(screen.getByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
 
   fireEvent.keyDown(document, { key: 'T' });
 
@@ -62,6 +62,7 @@ test('test panel retries once with default secret after a stale saved secret is 
   });
 
   await screen.findAllByText('Alpet');
+  fireEvent.click(screen.getByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
   fireEvent.keyDown(document, { key: 'T' });
   fireEvent.click(screen.getAllByRole('button', { name: '+ ticket', exact: false })[0]);
 
@@ -171,4 +172,35 @@ test('a frame that adds a sample mapping alongside its announcement configures b
 
   await waitFor(() => assert.ok(played.includes('/sound/new.mp3'),
     `expected the mapped sample to play, saw ${JSON.stringify(played)}`), { timeout: 1000 });
+});
+
+test('a closing ceremony waits for the audio gate and is stored once it starts', async () => {
+  const snapshot = {
+    ...DEFAULT_SNAPSHOT,
+    config: { agents: ['Alpet', 'Bajram'], services: ['KFC'], announcer: { tts: { enabled: false } } },
+    ceremony: {
+      id: 'awards:2026-07-09',
+      day: '2026-07-09',
+      awards: [{ key: 'mvp', title: 'MVP', winner: 'Alpet', line: 'Alpet is today’s MVP!' }]
+    }
+  };
+
+  await renderApp(snapshot);
+  await screen.findByRole('button', { name: 'CLICK TO ARM SPEAKERS' });
+  assert.strictEqual(screen.queryByText('Alpet is today’s MVP!'), null);
+  assert.strictEqual(localStorage.getItem('ticket-arena:ceremony:v1:awards:2026-07-09'), null);
+
+  fireEvent.click(screen.getByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
+  assert.ok(await screen.findByText('Alpet is today’s MVP!'));
+  assert.strictEqual(localStorage.getItem('ticket-arena:ceremony:v1:awards:2026-07-09'), 'shown');
+});
+
+test('inbox invasion is omitted when its independent feature flag is false', async () => {
+  const snapshot = {
+    ...DEFAULT_SNAPSHOT,
+    config: { features: { inboxInvasion: false }, agents: ['Alpet', 'Bajram'], services: ['KFC'] }
+  };
+  await renderApp(snapshot);
+  fireEvent.click(await screen.findByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
+  assert.strictEqual(screen.queryByRole('heading', { name: 'INBOX INVASION' }), null);
 });

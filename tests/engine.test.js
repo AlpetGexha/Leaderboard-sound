@@ -43,7 +43,7 @@ test('resolves increment count and fire a tier announcement every time, falling 
   for (let i = 1; i <= 15; i++) {
     const r = applyEvent(s, ev('ticket.resolved', 'Kushtrim', `T-${i}`, i * 1000));
     assert.strictEqual(r.accepted, true);
-    for (const a of r.announcements) titles.push(`${a.count}:${a.title}`);
+    for (const a of r.announcements.filter(item => item.kind === 'tier')) titles.push(`${a.count}:${a.title}`);
   }
   assert.deepStrictEqual(titles, [
     '1:SOLVED', '2:DOUBLE KILL', '3:TRIPLE KILL', '4:KILLING SPREE',

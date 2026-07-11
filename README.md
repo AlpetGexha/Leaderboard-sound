@@ -54,6 +54,14 @@ Stop the stack with:
 docker compose down
 ```
 
+To run the containerized dev stack instead (Vite on `5173`, `DEV=1`, source mounted), layer the dev file on top:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+The dev file is deliberately not named `docker-compose.override.yml`; Compose auto-merges that name, which would turn a plain `docker compose up` into a dev run.
+
 Runtime data is stored in the `ticket_arena_data` Docker volume mounted at `/app/data`, so event history and TTS cache survive container restarts. Runtime secrets such as `FISH_API_KEY` and `WEBHOOK_SECRET` can be provided through `.env`, which Docker Compose loads at runtime without baking it into the image.
 
 ## Webhook Contract
@@ -100,6 +108,26 @@ Responses return `{ "accepted": true }` when the event changed game state. Dupli
 - `services`: company/source names shown in the local test panel.
 - `announcements`: editable announcement titles and lines. Lines support `{name}`, `{agent}`, `{service}`, `{ticketId}`, `{type}`, and `{count}` placeholders.
 - `announcer`: browser sound profile for voice tuning, background audio, and event sample files.
+
+Fun features are independently configurable and default to enabled when a flag is omitted:
+
+```json
+{
+  "features": {
+    "inboxInvasion": true,
+    "comebackAnnouncements": true,
+    "endOfDayAwards": true
+  },
+  "featureSettings": {
+    "comebackCooldownSeconds": 60,
+    "awardsTime": "17:00"
+  }
+}
+```
+
+Inbox Invasion visualizes today's unresolved created tickets (the eight oldest plus an overflow count). A matching resolution defeats the enemy; unmatched resolutions still score normally. Comeback announcements run after tier announcements and use the global cooldown. Customize their `crown`, `basement`, and `climbing` lines under `announcements.comebacks`.
+
+At `awardsTime` in `timezone`, End-of-Day Awards freeze a closing snapshot while the live leaderboard continues until midnight. Each browser shows that day's ceremony once. Eligible categories are MVP (leaderboard winner), First Blood, Comeback Player (largest recovery from worst held rank), Service Specialist (most resolutions on one service), and Inbox Slayer (most matched resolutions). Empty categories are skipped; ties follow closing leaderboard order. Lines live under `announcements.awards` and support `{winner}`, `{title}`, and `{detail}`.
 
 For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides `config.webhookSecret`.
 
@@ -162,6 +190,8 @@ Resolved ticket counts trigger tier announcements at exact milestones:
 | 15 | MONSTER KILL |
 
 First `ticket.created` of the day triggers `FIRST BLOOD`. Later created tickets trigger `NEW TICKET`.
+
+All gameplay, invasion tracking, comeback detection, and awards continue to use only the existing `ticket.created` and `ticket.resolved` webhook events; no integration action was added.
 
 ## Frontend Routes
 
