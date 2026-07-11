@@ -117,3 +117,21 @@ test('sseHub broadcasts a framed payload to every client and drops closed ones',
   hub.broadcast({ day: 'x' });
   assert.strictEqual(written.length, 1);
 });
+
+test('broadcast survives a client whose write throws and still reaches the others', () => {
+  const hub = createSseHub();
+  const good = [];
+  // The dead client is added first, so it is iterated first: a thrown write
+  // must not abort delivery to goodClient behind it.
+  const deadClient = { write: () => { throw new Error('ERR_STREAM_DESTROYED'); } };
+  const goodClient = { write: frame => good.push(frame) };
+  hub.add(deadClient);
+  hub.add(goodClient);
+
+  assert.doesNotThrow(() => hub.broadcast({ day: 'x' }));
+  assert.deepStrictEqual(good, ['data: {"day":"x"}\n\n']);
+  assert.strictEqual(hub.size, 1, 'the failed client should have been dropped');
+
+  hub.broadcast({ day: 'y' });
+  assert.strictEqual(good.length, 2);
+});

@@ -2,10 +2,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { createRouter, matchRoute } = require('../lib/server/router');
+const { ttsAction } = require('../lib/server/actions/tts');
+const { Readable } = require('node:stream');
 
 function fakeRes() {
-  const res = { statusCode: null, headers: null, body: null };
-  res.writeHead = (status, headers) => { res.statusCode = status; res.headers = headers; };
+  const res = { statusCode: null, headers: null, body: null, headersSent: false };
+  res.writeHead = (status, headers) => { res.statusCode = status; res.headers = headers; res.headersSent = true; };
   res.end = body => { res.body = body; };
   return res;
 }
@@ -114,4 +116,59 @@ test('router passes deps and the parsed url through the context', async () => {
   assert.strictEqual(seen.deps.dev, true);
   assert.strictEqual(seen.url.pathname, '/probe');
   assert.strictEqual(seen.url.searchParams.get('a'), '1');
+});
+
+test('an action that throws becomes a 500 instead of crashing the process', async () => {
+  const logs = [];
+  const routes = [{ method: 'GET', path: '/boom', action: async () => { throw new Error('kaboom'); } }];
+  const handle = createRouter(routes, { logger: { log: m => logs.push(m) } });
+  const res = fakeRes();
+
+  await assert.doesNotReject(handle({ method: 'GET', url: '/boom', headers: {} }, res));
+  assert.strictEqual(res.statusCode, 500);
+  assert.deepStrictEqual(JSON.parse(res.body), { error: 'internal error' });
+  assert.strictEqual(logs.length, 1);
+});
+
+test('a guard that throws becomes a 500 and the action never runs', async () => {
+  let ran = false;
+  const routes = [{
+    method: 'GET',
+    path: '/boom',
+    guards: [async () => { throw new Error('guard fail'); }],
+    action: async () => { ran = true; }
+  }];
+  const handle = createRouter(routes, {});
+  const res = fakeRes();
+
+  await assert.doesNotReject(handle({ method: 'GET', url: '/boom', headers: {} }, res));
+  assert.strictEqual(res.statusCode, 500);
+  assert.strictEqual(ran, false);
+});
+
+test('the 500 boundary does not double-send when the action already wrote headers', async () => {
+  const routes = [{
+    method: 'GET',
+    path: '/boom',
+    action: async ctx => { ctx.res.writeHead(200); throw new Error('after headers'); }
+  }];
+  const handle = createRouter(routes, {});
+  const res = fakeRes();
+
+  await assert.doesNotReject(handle({ method: 'GET', url: '/boom', headers: {} }, res));
+  // Headers were already sent as 200; the boundary must not overwrite them with 500.
+  assert.strictEqual(res.statusCode, 200);
+});
+
+test('ttsAction returns 400 for an empty POST body instead of dereferencing null', async () => {
+  const req = Readable.from([]);
+  req.method = 'POST';
+  req.headers = {};
+  const res = fakeRes();
+  const url = new URL('http://localhost/api/tts');
+  const deps = { fishTts: { synthesize: async () => Buffer.from('x') }, logger: { log() {} } };
+
+  await assert.doesNotReject(ttsAction({ req, res, url, deps }));
+  assert.strictEqual(res.statusCode, 400);
+  assert.deepStrictEqual(JSON.parse(res.body), { error: 'bad text' });
 });
