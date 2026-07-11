@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { agentsFrom, servicesFrom } from '../../domain/snapshot.js';
+import { randomPriority } from '../../domain/priority.js';
 import { useHotkey } from '../../hooks/useHotkey.js';
 import * as api from '../../services/arenaApi.js';
 import { createSecretStore } from '../../services/secretStore.js';
@@ -18,7 +19,6 @@ export function TestPanel({ snapshot }) {
 
   const [secret, setSecret] = useState(() => secretStore.get());
   const [service, setService] = useState('');
-  const [priority, setPriority] = useState('medium');
 
   const agents = agentsFrom(snapshot);
   const services = servicesFrom(snapshot);
@@ -38,7 +38,7 @@ export function TestPanel({ snapshot }) {
   }
 
   async function onCreate(agent) {
-    const result = await createTicket(deps, { agent, service: selectedService, priority });
+    const result = await createTicket(deps, { agent, service: selectedService, priority: randomPriority() });
     setSecret(result.secret);
   }
 
@@ -54,8 +54,6 @@ export function TestPanel({ snapshot }) {
         services={services}
         selectedService={selectedService}
         onServiceChange={setService}
-        priority={priority}
-        onPriorityChange={setPriority}
         secret={secret}
         onSecretChange={changeSecret}
         onReset={() => resetDay({ api })}

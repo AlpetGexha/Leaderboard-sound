@@ -49,3 +49,11 @@ test('voiceLine always speaks the full line, including the title', async () => {
   assert.strictEqual(voiceLine({ line: 'no title' }), 'no title');
   assert.strictEqual(voiceLine({ title: 'X' }), '');
 });
+
+test('randomPriority covers the four equally sized priority buckets', async () => {
+  const { randomPriority } = await import('../src/domain/priority.js');
+  assert.strictEqual(randomPriority(() => 0), 'low');
+  assert.strictEqual(randomPriority(() => 0.25), 'medium');
+  assert.strictEqual(randomPriority(() => 0.5), 'high');
+  assert.strictEqual(randomPriority(() => 0.9999), 'urgent');
+});
