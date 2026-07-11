@@ -20,16 +20,16 @@ export default function App() {
   const { scoredAgents, clearScored, resetScores, syncSolved } = useScoreFlash();
 
   const onBeforeApply = useCallback(next => {
+    if (next.dayRolled) resetScores();
     if (next?.config?.announcer) announcer.configure(next.config.announcer);
     captureOldTops();
-  }, [announcer, captureOldTops]);
+  }, [announcer, captureOldTops, resetScores]);
 
-  const onMessage = useCallback(msg => {
-    if (msg.dayRolled) resetScores();
-    ingestFrame(msg);
-  }, [ingestFrame, resetScores]);
+  const onAfterApply = useCallback(next => {
+    ingestFrame(next);
+  }, [ingestFrame]);
 
-  const { snapshot, live } = useArenaSnapshot({ onBeforeApply, onMessage });
+  const { snapshot, live } = useArenaSnapshot({ onBeforeApply, onAfterApply });
 
   useLayoutEffect(() => {
     if (!snapshot) return;

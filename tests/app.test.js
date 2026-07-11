@@ -125,3 +125,50 @@ test('duplicate live announcements with the same announcementId are only played 
 
   await waitFor(() => assert.deepStrictEqual(played, ['/sound/transmission.mp3']));
 });
+
+test('a frame that adds a sample mapping alongside its announcement configures before enqueuing', async () => {
+  // The initial snapshot maps no samples. The live frame introduces the sample
+  // and the announcement together. The announcer must apply the new profile
+  // before it dequeues, or createSample reads the stale (empty) samples map and
+  // the mapped MP3 never plays.
+  const initial = {
+    ...DEFAULT_SNAPSHOT,
+    config: { agents: ['Alpet', 'Bajram'], services: ['KFC'], announcer: { tts: { enabled: false } } }
+  };
+  const played = [];
+  global.Audio = global.window.Audio = class {
+    constructor(src) { this.src = src; this.volume = 1; this.loop = false; this.duration = 0.05; }
+    play() { played.push(this.src); return Promise.resolve(); }
+    pause() {}
+    load() {}
+  };
+
+  await renderApp(initial, {
+    fetch(url) {
+      if (url === '/api/state') return Promise.resolve({ json: () => Promise.resolve(initial) });
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('ok') });
+    }
+  });
+
+  fireEvent.click(await screen.findByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
+
+  const frame = {
+    ...initial,
+    config: {
+      agents: ['Alpet', 'Bajram'],
+      services: ['KFC'],
+      announcer: { samples: { new_ticket: '/sound/new.mp3' }, tts: { enabled: false } }
+    },
+    announcements: [{
+      announcementId: 'evt-9:new_ticket',
+      kind: 'new_ticket',
+      title: 'NEW TICKET',
+      line: 'NEW TICKET, By Alpet on KFC'
+    }]
+  };
+
+  global.EventSource.instances[0].onmessage({ data: JSON.stringify(frame) });
+
+  await waitFor(() => assert.ok(played.includes('/sound/new.mp3'),
+    `expected the mapped sample to play, saw ${JSON.stringify(played)}`), { timeout: 1000 });
+});
