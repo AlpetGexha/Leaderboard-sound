@@ -68,7 +68,7 @@ export function createAnnouncer({ onShow = () => {}, onHide = () => {} } = {}) {
       playAudio(sampleAudio);
       const stingerMs = playStinger(a, hasSample);
       await delay(Math.max(sampleMs, stingerMs));
-      await playAiVoice(a, hasSample, profile);
+      await playAiVoice(a, profile);
       await delay(TAIL_MS);
     } finally {
       stopAudio(transmissionAudio);

@@ -5,8 +5,8 @@
   "description": "FPS-style gamified leaderboard for support tickets",
   "scripts": {
     "start": "node server.js",
-    "dev:server": "cross-env DEV=1 node server.js",
-    "dev:client": "vite --host 127.0.0.1",
+    "dev:server": "cross-env DEV=1 node --watch server.js",
+    "dev:client": "vite --host 0.0.0.0",
     "dev": "concurrently -k -n server,client -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",

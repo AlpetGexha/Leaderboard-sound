@@ -172,21 +172,21 @@ test('createSample builds an audio element only when the profile maps the key', 
 
 test('ttsUrl encodes the spoken line, kind, title, and optional count', async () => {
   const { ttsUrl } = await import('../src/services/audio/ttsClient.js');
-  const url = ttsUrl({ kind: 'tier', count: 2, title: 'DOUBLE KILL', line: 'DOUBLE KILL, Alpet' }, true);
+  const url = ttsUrl({ kind: 'tier', count: 2, title: 'DOUBLE KILL', line: 'DOUBLE KILL, Alpet' });
   const params = new URL(url, 'http://x').searchParams;
-  assert.strictEqual(params.get('text'), 'Alpet');
+  assert.strictEqual(params.get('text'), 'DOUBLE KILL, Alpet');
   assert.strictEqual(params.get('kind'), 'tier');
   assert.strictEqual(params.get('title'), 'DOUBLE KILL');
   assert.strictEqual(params.get('count'), '2');
 
-  const noCount = ttsUrl({ kind: 'new_ticket', title: 'NEW TICKET', line: 'New ticket by Alpet' }, false);
+  const noCount = ttsUrl({ kind: 'new_ticket', title: 'NEW TICKET', line: 'New ticket by Alpet' });
   assert.strictEqual(new URL(noCount, 'http://x').searchParams.get('count'), null);
 });
 
 test('playAiVoice resolves false when tts is disabled or the line is empty', async () => {
   const { playAiVoice } = await import('../src/services/audio/ttsClient.js');
-  assert.strictEqual(await playAiVoice({ kind: 'x', line: 'hi' }, false, { tts: { enabled: false } }), false);
-  assert.strictEqual(await playAiVoice({ kind: 'x', line: '' }, false, { tts: { enabled: true } }), false);
+  assert.strictEqual(await playAiVoice({ kind: 'x', line: 'hi' }, { tts: { enabled: false } }), false);
+  assert.strictEqual(await playAiVoice({ kind: 'x', line: '' }, { tts: { enabled: true } }), false);
 });
 
 test('playAiVoice resolves true when the audio finishes', async () => {
@@ -197,7 +197,7 @@ test('playAiVoice resolves true when the audio finishes', async () => {
       play() { setTimeout(() => this.onended(), 0); return Promise.resolve(); }
     }
   };
-  const ok = await playAiVoice({ kind: 'x', line: 'hi' }, false, { tts: { enabled: true, volume: 1 } });
+  const ok = await playAiVoice({ kind: 'x', line: 'hi' }, { tts: { enabled: true, volume: 1 } });
   assert.strictEqual(ok, true);
   delete global.window;
 });
@@ -210,7 +210,7 @@ test('playAiVoice resolves false when the audio errors', async () => {
       play() { setTimeout(() => this.onerror(), 0); return Promise.resolve(); }
     }
   };
-  const ok = await playAiVoice({ kind: 'x', line: 'hi' }, false, { tts: { enabled: true } });
+  const ok = await playAiVoice({ kind: 'x', line: 'hi' }, { tts: { enabled: true } });
   assert.strictEqual(ok, false);
   delete global.window;
 });

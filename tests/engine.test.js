@@ -37,7 +37,7 @@ test('duplicate created ticketId is rejected', () => {
   assert.strictEqual(dup.accepted, false);
 });
 
-test('resolves increment count and fire tier announcements at exact milestones', () => {
+test('resolves increment count and fire a tier announcement every time, falling back to SOLVED between milestones', () => {
   const s = createDay(AGENTS);
   const titles = [];
   for (let i = 1; i <= 15; i++) {
@@ -47,7 +47,8 @@ test('resolves increment count and fire tier announcements at exact milestones',
   }
   assert.deepStrictEqual(titles, [
     '1:SOLVED', '2:DOUBLE KILL', '3:TRIPLE KILL', '4:KILLING SPREE',
-    '5:UNSTOPPABLE', '7:RAMPAGE', '10:GODLIKE', '15:MONSTER KILL'
+    '5:UNSTOPPABLE', '6:SOLVED', '7:RAMPAGE', '8:SOLVED', '9:SOLVED', '10:GODLIKE',
+    '11:SOLVED', '12:SOLVED', '13:SOLVED', '14:SOLVED', '15:MONSTER KILL'
   ]);
   assert.strictEqual(publicState(s).leaderboard[0].solved, 15);
 });

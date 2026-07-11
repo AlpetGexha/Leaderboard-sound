@@ -20,10 +20,6 @@ export function sampleFallbackMs(a) {
   return a.kind === 'tier' && a.count >= 5 ? 900 : 650;
 }
 
-// When a mapped MP3 already announces the title, the spoken line must not repeat it.
-export function voiceLine(a, hasSample) {
-  if (!hasSample) return a.line || '';
-  if (!a.title || !a.line) return a.line || '';
-  const prefix = `${a.title}, `;
-  return a.line.startsWith(prefix) ? a.line.slice(prefix.length) : a.line;
+export function voiceLine(a) {
+  return a.line || '';
 }

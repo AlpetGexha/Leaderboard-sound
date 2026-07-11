@@ -42,11 +42,10 @@ test('sampleFallbackMs is longer for high tiers', async () => {
   assert.strictEqual(sampleFallbackMs({ kind: 'first_blood' }), 650);
 });
 
-test('voiceLine strips the title prefix only when a sample already speaks it', async () => {
+test('voiceLine always speaks the full line, including the title', async () => {
   const { voiceLine } = await import('../src/domain/announcement.js');
   const a = { title: 'DOUBLE KILL', line: 'DOUBLE KILL, Alpet' };
-  assert.strictEqual(voiceLine(a, true), 'Alpet');
-  assert.strictEqual(voiceLine(a, false), 'DOUBLE KILL, Alpet');
-  assert.strictEqual(voiceLine({ line: 'no title' }, true), 'no title');
-  assert.strictEqual(voiceLine({ title: 'X' }, true), '');
+  assert.strictEqual(voiceLine(a), 'DOUBLE KILL, Alpet');
+  assert.strictEqual(voiceLine({ line: 'no title' }), 'no title');
+  assert.strictEqual(voiceLine({ title: 'X' }), '');
 });

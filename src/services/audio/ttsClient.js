@@ -4,9 +4,9 @@ import { makeAudio } from './audioElement.js';
 
 const DEFAULT_TTS_TIMEOUT_MS = 9000;
 
-export function ttsUrl(a, hasSample) {
+export function ttsUrl(a) {
   const params = new URLSearchParams({
-    text: voiceLine(a, hasSample),
+    text: voiceLine(a),
     kind: a.kind || '',
     title: a.title || ''
   });
@@ -14,12 +14,12 @@ export function ttsUrl(a, hasSample) {
   return `/api/tts?${params.toString()}`;
 }
 
-export function playAiVoice(a, hasSample, profile) {
+export function playAiVoice(a, profile) {
   return new Promise(resolve => {
-    const text = voiceLine(a, hasSample);
+    const text = voiceLine(a);
     if (!canSpeak(profile, text)) return resolve(false);
 
-    const audio = makeAudio(ttsUrl(a, hasSample), { volume: profile.tts.volume ?? 1 });
+    const audio = makeAudio(ttsUrl(a), { volume: profile.tts.volume ?? 1 });
     if (!audio) return resolve(false);
 
     let finished = false;

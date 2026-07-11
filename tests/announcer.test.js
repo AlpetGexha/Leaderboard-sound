@@ -425,7 +425,7 @@ test('announcement plays Fish TTS audio for the custom message after local sound
   assert.strictEqual(played[0], '/sound/transmission.mp3');
   assert.strictEqual(played[1], '/sound/DoubleKill.mp3');
   assert.match(played[2], /^\/api\/tts\?/);
-  assert.strictEqual(new URLSearchParams(played[2].split('?')[1]).get('text'), 'By Alpet on KFC');
+  assert.strictEqual(new URLSearchParams(played[2].split('?')[1]).get('text'), 'DOUBLE KILL, By Alpet on KFC');
 });
 
 test('solved announcements without a mapped sample still speak the full line', async () => {
