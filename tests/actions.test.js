@@ -105,3 +105,45 @@ test('resetDay warns when the server is not in dev mode', async () => {
   assert.strictEqual(notices.length, 1);
   assert.match(notices[0], /DEV=1/);
 });
+
+// The TestPanel calls resetDay({ api }) with no notify, so the default runs in
+// production. A native window.alert throws "Illegal invocation" if invoked with
+// this !== window, so a bare `notify(msg)` on a detached reference fails in a
+// real browser. jsdom's alert is a no-op that skips that check, so we install a
+// faithful native alert here to catch the regression the injected tests can't.
+function installNativeAlert(shown) {
+  const previous = window.alert;
+  window.alert = function alert(message) {
+    if (this !== window) throw new TypeError('Illegal invocation');
+    shown.push(message);
+  };
+  return () => { window.alert = previous; };
+}
+
+test('resetDay shows the default alert without an Illegal invocation in a real browser', async () => {
+  const { resetDay } = await import('../src/actions/resetDay.js');
+  const shown = [];
+  const restore = installNativeAlert(shown);
+  try {
+    const api = { postDevReset: () => Promise.resolve({ ok: false }) };
+    await assert.doesNotReject(resetDay({ api }));
+    assert.deepStrictEqual(shown, ['reset only works when server runs with DEV=1']);
+  } finally {
+    restore();
+  }
+});
+
+test('sendTicketEvent shows the default alert without an Illegal invocation in a real browser', async () => {
+  const { sendTicketEvent } = await import('../src/actions/sendTicketEvent.js');
+  const { createSecretStore } = await import('../src/services/secretStore.js');
+  const shown = [];
+  const restore = installNativeAlert(shown);
+  try {
+    const api = { postEvent: () => Promise.resolve({ status: 401, ok: false, text: () => Promise.resolve('') }) };
+    const result = await sendTicketEvent({ api, secretStore: createSecretStore() }, { type: 'ticket.created' });
+    assert.strictEqual(result.ok, false);
+    assert.deepStrictEqual(shown, ['Test event rejected: bad webhook secret. The server is not using arena-dev-secret.']);
+  } finally {
+    restore();
+  }
+});
