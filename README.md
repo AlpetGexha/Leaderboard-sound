@@ -85,6 +85,7 @@ Payload fields:
 - `agent`: support agent name, matched case-insensitively and stored with canonical config casing.
 - `ticketId`: required, coerced to a trimmed string.
 - `service`: optional company/source name, defaults to `General`.
+- `priority`: optional `low`, `medium`, `high`, or `urgent`; defaults to `medium`. `status` is accepted as an alias.
 
 Example:
 
@@ -92,7 +93,7 @@ Example:
 curl.exe -X POST http://localhost:3000/api/events `
   -H "Content-Type: application/json" `
   -H "X-Webhook-Secret: arena-dev-secret" `
-  -d "{\"type\":\"ticket.resolved\",\"agent\":\"Kushtrim\",\"service\":\"KFC\",\"ticketId\":\"T-1042\"}"
+  -d "{\"type\":\"ticket.created\",\"agent\":\"Kushtrim\",\"service\":\"KFC\",\"ticketId\":\"T-1042\",\"priority\":\"urgent\"}"
 ```
 
 Responses return `{ "accepted": true }` when the event changed game state. Duplicate created ticket IDs, duplicate resolved ticket IDs, unknown agents, and unknown types are rejected or ignored by the engine.

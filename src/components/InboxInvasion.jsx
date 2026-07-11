@@ -1,7 +1,11 @@
 import React, { memo, useEffect, useState } from 'react';
 
-const MONSTERS = ['👾', '👹', '🤖', '💀', '🦠', '🐙', '🧟', '🛸'];
-const TITLES = ['Queue Goblin', 'SLA Eater', 'Reply Vampire', 'Inbox Gremlin', 'Escalation Beast'];
+const PRIORITY_MONSTERS = {
+  low: { emoji: '🦠', title: 'Tiny Queue Slime', hue: 145 },
+  medium: { emoji: '👾', title: 'Inbox Goblin', hue: 210 },
+  high: { emoji: '👹', title: 'Escalation Demon', hue: 30 },
+  urgent: { emoji: '💀', title: 'SLA Apocalypse', hue: 355 }
+};
 
 function hash(value) {
   let result = 2166136261;
@@ -9,13 +13,10 @@ function hash(value) {
   return result >>> 0;
 }
 
-export function monsterFor(service) {
-  const value = hash(service);
-  return {
-    emoji: MONSTERS[value % MONSTERS.length],
-    title: TITLES[(value >>> 4) % TITLES.length],
-    hue: value % 360
-  };
+export function monsterFor(service, priority = 'medium') {
+  const category = PRIORITY_MONSTERS[priority] || PRIORITY_MONSTERS.medium;
+  const serviceVariation = hash(service) % 18 - 9;
+  return { ...category, hue: (category.hue + serviceVariation + 360) % 360 };
 }
 
 export const InboxInvasion = memo(function InboxInvasion({ invasion, effects }) {
@@ -37,12 +38,14 @@ export const InboxInvasion = memo(function InboxInvasion({ invasion, effects }) 
       <div className="invasion-head"><h2 id="invasion-title">INBOX INVASION</h2><strong aria-live="polite">{invasion?.activeCount || 0} ACTIVE</strong></div>
       <div className="battlefield">
         {enemies.map(enemy => {
-          const monster = monsterFor(enemy.service);
+          const priority = enemy.priority || 'medium';
+          const monster = monsterFor(enemy.service, priority);
           return (
-            <article key={enemy.ticketId} className={`monster ${spawned.has(enemy.ticketId) ? 'spawned' : ''}`}
+            <article key={enemy.ticketId} className={`monster priority-${priority} ${spawned.has(enemy.ticketId) ? 'spawned' : ''}`}
               style={{ '--monster-hue': monster.hue }}>
               <div className="monster-emoji" aria-hidden="true">{monster.emoji}</div>
               <strong>{monster.title}</strong><span>{enemy.ticketId}</span>
+              <b className="monster-priority">{priority}</b>
               <small>{enemy.service} · opened by {enemy.agent}</small>
             </article>
           );

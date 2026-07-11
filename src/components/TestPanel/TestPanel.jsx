@@ -18,6 +18,7 @@ export function TestPanel({ snapshot }) {
 
   const [secret, setSecret] = useState(() => secretStore.get());
   const [service, setService] = useState('');
+  const [priority, setPriority] = useState('medium');
 
   const agents = agentsFrom(snapshot);
   const services = servicesFrom(snapshot);
@@ -37,7 +38,7 @@ export function TestPanel({ snapshot }) {
   }
 
   async function onCreate(agent) {
-    const result = await createTicket(deps, { agent, service: selectedService });
+    const result = await createTicket(deps, { agent, service: selectedService, priority });
     setSecret(result.secret);
   }
 
@@ -53,6 +54,8 @@ export function TestPanel({ snapshot }) {
         services={services}
         selectedService={selectedService}
         onServiceChange={setService}
+        priority={priority}
+        onPriorityChange={setPriority}
         secret={secret}
         onSecretChange={changeSecret}
         onReset={() => resetDay({ api })}

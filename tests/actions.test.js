@@ -90,7 +90,7 @@ test('createTicket and resolveTicket carry the paired ticket id', async () => {
   await resolveTicket(deps, { agent: 'Alpet', service: 'KFC' });
 
   assert.deepStrictEqual(payloads, [
-    { type: 'ticket.created', agent: 'Alpet', service: 'KFC', ticketId: 'T-1' },
+    { type: 'ticket.created', agent: 'Alpet', service: 'KFC', priority: 'medium', ticketId: 'T-1' },
     { type: 'ticket.resolved', agent: 'Alpet', service: 'KFC', ticketId: 'T-1' }
   ]);
 });

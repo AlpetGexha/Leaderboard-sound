@@ -23,6 +23,16 @@ test('agent matching is case-insensitive but canonicalized', () => {
 test('missing service defaults to General', () => {
   const r = parseWebhook({ type: 'ticket.created', agent: 'Alpet', ticketId: 'T-3' }, AGENTS);
   assert.strictEqual(r.event.service, 'General');
+  assert.strictEqual(r.event.priority, 'medium');
+});
+
+test('normalizes priority and accepts status as an alias', () => {
+  const urgent = parseWebhook({ type: 'ticket.created', agent: 'Alpet', ticketId: 'P-1', priority: ' URGENT ' }, AGENTS);
+  const low = parseWebhook({ type: 'ticket.created', agent: 'Alpet', ticketId: 'P-2', status: 'Low' }, AGENTS);
+  const unknown = parseWebhook({ type: 'ticket.created', agent: 'Alpet', ticketId: 'P-3', priority: 'critical' }, AGENTS);
+  assert.strictEqual(urgent.event.priority, 'urgent');
+  assert.strictEqual(low.event.priority, 'low');
+  assert.strictEqual(unknown.event.priority, 'medium');
 });
 
 test('rejects unknown type, unknown agent, missing ticketId, non-object body', () => {

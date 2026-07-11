@@ -37,6 +37,15 @@ test('duplicate created ticketId is rejected', () => {
   assert.strictEqual(dup.accepted, false);
 });
 
+test('invasion snapshot preserves created-ticket priority and defaults legacy events', () => {
+  const s = createDay(AGENTS);
+  applyEvent(s, { ...ev('ticket.created', 'Alpet', 'U-1', 1000, 'KFC'), priority: 'urgent' });
+  applyEvent(s, ev('ticket.created', 'Bajram', 'M-1', 2000, 'JYSK'));
+  assert.deepStrictEqual(publicState(s).invasion.enemies.map(enemy => [enemy.ticketId, enemy.priority]), [
+    ['U-1', 'urgent'], ['M-1', 'medium']
+  ]);
+});
+
 test('resolves increment count and fire a tier announcement every time, falling back to SOLVED between milestones', () => {
   const s = createDay(AGENTS);
   const titles = [];
