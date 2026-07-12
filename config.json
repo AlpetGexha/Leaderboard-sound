@@ -7,13 +7,25 @@
   "features": {
     "inboxInvasion": true,
     "comebackAnnouncements": true,
-    "endOfDayAwards": true
+    "endOfDayAwards": true,
+    "urgentBossAnnouncements": true,
+    "teamCombos": true
   },
   "featureSettings": {
     "comebackCooldownSeconds": 60,
-    "awardsTime": "17:00"
+    "awardsTime": "17:00",
+    "teamComboWindowSeconds": 30,
+    "teamComboMilestones": [
+      { "count": 3, "title": "TEAM STRIKE", "line": "Team Strike! {count} tickets solved together!" },
+      { "count": 5, "title": "INBOX PURGE", "line": "Inbox Purge! The team has reached a {count} solve combo!" },
+      { "count": 10, "title": "TOTAL ANNIHILATION", "line": "Total Annihilation! {count} team solves in a row!" }
+    ]
   },
   "announcements": {
+    "boss": {
+      "spawned": "An urgent boss has entered the arena!",
+      "defeated": "The SLA Apocalypse has been defeated by {name}!"
+    },
     "comebacks": {
       "crown": "{name} has stolen the crown!",
       "basement": "{name} has escaped the basement!",

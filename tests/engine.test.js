@@ -15,19 +15,24 @@ test('dayKey formats a calendar date in the given timezone', () => {
   assert.strictEqual(dayKey(Date.UTC(2026, 6, 8, 23, 30), 'UTC'), '2026-07-08');
 });
 
-test('first created ticket of the day is FIRST BLOOD, later ones are new_ticket', () => {
+test('first blood is awarded to the first solved ticket, not the first opened ticket', () => {
   const s = createDay(AGENTS);
   const r1 = applyEvent(s, ev('ticket.created', 'Ermira', 'T-1', 1000));
   assert.strictEqual(r1.accepted, true);
-  assert.strictEqual(r1.announcements[0].kind, 'first_blood');
-  assert.strictEqual(r1.announcements[0].announcementId, 'e1:first_blood');
+  assert.strictEqual(r1.announcements[0].kind, 'new_ticket');
+  assert.strictEqual(r1.announcements[0].announcementId, 'e1:new_ticket');
   assert.strictEqual(r1.announcements[0].ticketId, 'T-1');
-  assert.match(r1.announcements[0].line, /First blood on Billing by Ermira/i);
   const r2 = applyEvent(s, ev('ticket.created', 'Alpet', 'T-2', 2000));
   assert.strictEqual(r2.announcements[0].kind, 'new_ticket');
   assert.strictEqual(r2.announcements[0].announcementId, 'e2:new_ticket');
   assert.match(r2.announcements[0].line, /New ticket by Alpet/i);
-  assert.deepStrictEqual(publicState(s).firstBlood, { agent: 'Ermira', service: 'Billing', ts: 1000 });
+  assert.strictEqual(publicState(s).firstBlood, null);
+
+  const r3 = applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-2', 3000));
+  const firstBlood = r3.announcements.find(item => item.kind === 'first_blood');
+  assert.strictEqual(firstBlood.announcementId, 'e3:first_blood');
+  assert.match(firstBlood.line, /First blood on Billing by Alpet/i);
+  assert.deepStrictEqual(publicState(s).firstBlood, { agent: 'Alpet', service: 'Billing', ts: 3000 });
 });
 
 test('duplicate created ticketId is rejected', () => {
@@ -44,6 +49,55 @@ test('invasion snapshot preserves created-ticket priority and defaults legacy ev
   assert.deepStrictEqual(publicState(s).invasion.enemies.map(enemy => [enemy.ticketId, enemy.priority]), [
     ['U-1', 'urgent'], ['M-1', 'medium']
   ]);
+});
+
+test('urgent bosses announce spawn and matching defeat, with an independent disable flag', () => {
+  const s = createDay(AGENTS);
+  const opened = applyEvent(s, { ...ev('ticket.created', 'Alpet', 'BOSS-1', 1000), priority: 'urgent' });
+  assert.deepStrictEqual(opened.announcements.map(item => item.kind), ['new_ticket', 'urgent_boss_spawned']);
+  const defeated = applyEvent(s, ev('ticket.resolved', 'Bajram', 'BOSS-1', 2000));
+  assert.ok(defeated.announcements.some(item => item.kind === 'urgent_boss_defeated'));
+  assert.match(defeated.announcements.find(item => item.kind === 'urgent_boss_defeated').line, /Bajram/);
+
+  const disabled = createDay(AGENTS);
+  const result = applyEvent(disabled,
+    { ...ev('ticket.created', 'Alpet', 'BOSS-2', 3000), priority: 'urgent' },
+    { urgentBossAnnouncements: false });
+  assert.strictEqual(result.announcements.some(item => item.kind.startsWith('urgent_boss')), false);
+});
+
+test('team combo milestones and time window are configurable and independently disabled', () => {
+  const options = {
+    teamComboWindowSeconds: 5,
+    teamComboMilestones: [{ count: 2, title: 'DUO', line: 'Team combo {count}!' }]
+  };
+  const s = createDay(AGENTS);
+  applyEvent(s, ev('ticket.resolved', 'Alpet', 'C-1', 1000), options);
+  const combo = applyEvent(s, ev('ticket.resolved', 'Bajram', 'C-2', 5000), options);
+  const announcement = combo.announcements.find(item => item.kind === 'team_combo');
+  assert.strictEqual(announcement.title, 'DUO');
+  assert.strictEqual(announcement.line, 'Team combo 2!');
+
+  applyEvent(s, ev('ticket.resolved', 'Ermira', 'C-3', 11_000), options);
+  const restarted = applyEvent(s, ev('ticket.resolved', 'Mirlind', 'C-4', 12_000), options);
+  assert.strictEqual(restarted.announcements.some(item => item.kind === 'team_combo'), true);
+
+  const disabled = createDay(AGENTS);
+  applyEvent(disabled, ev('ticket.resolved', 'Alpet', 'D-1', 1000), { ...options, teamCombos: false });
+  const result = applyEvent(disabled, ev('ticket.resolved', 'Bajram', 'D-2', 2000), { ...options, teamCombos: false });
+  assert.strictEqual(result.announcements.some(item => item.kind === 'team_combo'), false);
+});
+
+test('solving a spawned ticket defeats its matching monster, regardless of solver', () => {
+  const s = createDay(AGENTS);
+  applyEvent(s, ev('ticket.created', 'Alpet', 'T-1', 1000, 'KFC'));
+
+  const resolved = applyEvent(s, ev('ticket.resolved', 'Bajram', 'T-1', 2000, 'KFC'));
+
+  assert.deepStrictEqual(resolved.effects, [
+    { type: 'monster_defeated', ticketId: 'T-1', agent: 'Bajram' }
+  ]);
+  assert.deepStrictEqual(publicState(s).invasion, { activeCount: 0, enemies: [] });
 });
 
 test('resolves increment count and fire a tier announcement every time, falling back to SOLVED between milestones', () => {
@@ -70,15 +124,20 @@ test('announcement templates can customize lines with event placeholders', () =>
       new_ticket: 'Incoming case for {name}: {service}'
     }
   });
-  assert.strictEqual(r1.announcements[0].line, 'Transmission: Ermira opened CTF ticket T-1');
+  assert.strictEqual(r1.announcements[0].line, 'Incoming case for Ermira: CTF');
 
   const r2 = applyEvent(s, ev('ticket.resolved', 'Ermira', 'T-1', 2000, 'CTF'), {
+    templates: {
+      first_blood: 'Transmission: {name} solved {service} ticket {ticketId}'
+    },
     tiers: {
       1: { name: 'FLAG CAPTURED', line: '{name} captured {service} flag {ticketId}' }
     }
   });
-  assert.strictEqual(r2.announcements[0].title, 'FLAG CAPTURED');
-  assert.strictEqual(r2.announcements[0].line, 'Ermira captured CTF flag T-1');
+  assert.strictEqual(r2.announcements.find(item => item.kind === 'first_blood').line,
+    'Transmission: Ermira solved CTF ticket T-1');
+  assert.strictEqual(r2.announcements.find(item => item.kind === 'tier').title, 'FLAG CAPTURED');
+  assert.strictEqual(r2.announcements.find(item => item.kind === 'tier').line, 'Ermira captured CTF flag T-1');
 });
 
 test('announcement templates can speak title by agent on service', () => {
@@ -90,8 +149,9 @@ test('announcement templates can speak title by agent on service', () => {
     }
   });
 
-  assert.strictEqual(r.announcements[0].line, 'SOLVED, By Alpet on KFC');
-  assert.strictEqual(r.announcements[0].announcementId, `${event.id}:tier:1`);
+  const tier = r.announcements.find(item => item.kind === 'tier');
+  assert.strictEqual(tier.line, 'SOLVED, By Alpet on KFC');
+  assert.strictEqual(tier.announcementId, `${event.id}:tier:1`);
 });
 
 test('a ticketId can only be resolved once (reopens ignored)', () => {

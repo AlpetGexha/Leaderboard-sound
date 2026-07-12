@@ -44,5 +44,7 @@ export function selectStinger(stingers, a, hasSample) {
   if (a.kind === 'first_blood') return () => stingers.firstBlood();
   if (a.kind === 'new_ticket') return null;
   if (a.kind === 'tier') return a.count >= 2 ? () => stingers.tier(a.count) : () => stingers.solved();
+  if (a.kind === 'team_combo') return () => stingers.tier(a.count);
+  if (a.kind === 'urgent_boss_spawned' || a.kind === 'urgent_boss_defeated') return () => stingers.firstBlood();
   return null;
 }

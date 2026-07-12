@@ -117,16 +117,26 @@ Fun features are independently configurable and default to enabled when a flag i
   "features": {
     "inboxInvasion": true,
     "comebackAnnouncements": true,
-    "endOfDayAwards": true
+    "endOfDayAwards": true,
+    "urgentBossAnnouncements": true,
+    "teamCombos": true
   },
   "featureSettings": {
     "comebackCooldownSeconds": 60,
-    "awardsTime": "17:00"
+    "awardsTime": "17:00",
+    "teamComboWindowSeconds": 30,
+    "teamComboMilestones": [
+      { "count": 3, "title": "TEAM STRIKE", "line": "Team Strike! {count} tickets solved together!" },
+      { "count": 5, "title": "INBOX PURGE", "line": "Inbox Purge! The team has reached a {count} solve combo!" },
+      { "count": 10, "title": "TOTAL ANNIHILATION", "line": "Total Annihilation! {count} team solves in a row!" }
+    ]
   }
 }
 ```
 
 Inbox Invasion visualizes today's unresolved created tickets (the eight oldest plus an overflow count). A matching resolution defeats the enemy; unmatched resolutions still score normally. Comeback announcements run after tier announcements and use the global cooldown. Customize their `crown`, `basement`, and `climbing` lines under `announcements.comebacks`.
+
+Urgent Boss Announcements add fullscreen spawn and defeat callouts for `urgent` tickets. Customize their lines under `announcements.boss`. Team Combos count solves by the whole team inside `teamComboWindowSeconds`; each entry in `teamComboMilestones` configures the triggering count, title, and line. Disabling either feature does not affect solves or leaderboard scoring.
 
 At `awardsTime` in `timezone`, End-of-Day Awards freeze a closing snapshot while the live leaderboard continues until midnight. Each browser shows that day's ceremony once. Eligible categories are MVP (leaderboard winner), First Blood, Comeback Player (largest recovery from worst held rank), Service Specialist (most resolutions on one service), and Inbox Slayer (most matched resolutions). Empty categories are skipped; ties follow closing leaderboard order. Lines live under `announcements.awards` and support `{winner}`, `{title}`, and `{detail}`.
 

@@ -54,6 +54,9 @@ test('isBigAnnouncement selects the fullscreen overlay', async () => {
   assert.strictEqual(isBigAnnouncement({ kind: 'tier', count: 2 }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'tier', count: 1 }), false);
   assert.strictEqual(isBigAnnouncement({ kind: 'new_ticket' }), false);
+  assert.strictEqual(isBigAnnouncement({ kind: 'urgent_boss_spawned' }), true);
+  assert.strictEqual(isBigAnnouncement({ kind: 'urgent_boss_defeated' }), true);
+  assert.strictEqual(isBigAnnouncement({ kind: 'team_combo', count: 3 }), true);
   assert.strictEqual(isBigAnnouncement(null), false);
 });
 

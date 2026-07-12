@@ -85,7 +85,7 @@ test('applyEvent accepts a new resolve and returns its announcements', () => {
   const event = { id: 'e1', type: 'ticket.resolved', agent: 'Alpet', service: 'KFC', ticketId: 'T-9', ts: 1 };
   const first = arena.applyEvent(event);
   assert.strictEqual(first.accepted, true);
-  assert.strictEqual(first.announcements[0].title, 'SOLVED');
+  assert.deepStrictEqual(first.announcements.map(announcement => announcement.title), ['FIRST BLOOD', 'SOLVED']);
 
   const duplicate = arena.applyEvent(event);
   assert.strictEqual(duplicate.accepted, false);
@@ -139,9 +139,13 @@ test('broadcast survives a client whose write throws and still reaches the other
 test('feature flags default true and explicit false is exposed', () => {
   const defaults = createArenaState({ config: CONFIG, store: memoryStore(), now: () => 0, logger: silentLogger });
   assert.deepStrictEqual(defaults.snapshot().config.features, {
-    inboxInvasion: true, comebackAnnouncements: true, endOfDayAwards: true
+    inboxInvasion: true, comebackAnnouncements: true, endOfDayAwards: true,
+    urgentBossAnnouncements: true, teamCombos: true
   });
-  const config = { ...CONFIG, features: { inboxInvasion: false, comebackAnnouncements: false, endOfDayAwards: false } };
+  const config = { ...CONFIG, features: {
+    inboxInvasion: false, comebackAnnouncements: false, endOfDayAwards: false,
+    urgentBossAnnouncements: false, teamCombos: false
+  } };
   const off = createArenaState({ config, store: memoryStore(), now: () => 0, logger: silentLogger });
   assert.deepStrictEqual(off.snapshot().config.features, config.features);
   assert.strictEqual(off.snapshot().ceremony, null);

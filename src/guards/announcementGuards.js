@@ -20,7 +20,8 @@ export function createDedupeGuard({ max = SEEN_MAX, keep = SEEN_KEEP } = {}) {
 
 export function isBigAnnouncement(a) {
   if (!a) return false;
-  return a.kind === 'first_blood' || a.kind === 'award' || (a.kind === 'tier' && a.count >= 2);
+  return a.kind === 'first_blood' || a.kind === 'award' || a.kind === 'urgent_boss_spawned' ||
+    a.kind === 'urgent_boss_defeated' || a.kind === 'team_combo' || (a.kind === 'tier' && a.count >= 2);
 }
 
 export function isSolveAnnouncement(a) {

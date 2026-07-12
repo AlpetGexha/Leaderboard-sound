@@ -5,16 +5,16 @@ const assert = require('node:assert');
 
 afterEach(() => global.__resetBrowserMocks());
 
-test('ticketIds pairs a resolve with the open ticket for that agent', async () => {
+test('ticketIds pairs any resolve with the oldest open ticket', async () => {
   const { createTicketIds } = await import('../src/services/ticketIds.js');
   const ids = createTicketIds(100);
 
   assert.strictEqual(ids.forCreate('Alpet'), 'T-101');
-  assert.strictEqual(ids.forResolve('Alpet'), 'T-101');
+  assert.strictEqual(ids.forCreate('Bajram'), 'T-102');
+  assert.strictEqual(ids.forResolve('Kushtrim'), 'T-101');
+  assert.strictEqual(ids.forResolve('Ermira'), 'T-102');
   // The open ticket was consumed, so the next resolve mints a fresh id.
-  assert.strictEqual(ids.forResolve('Alpet'), 'T-102');
-  // A resolve for an agent with no open ticket also mints a fresh id.
-  assert.strictEqual(ids.forResolve('Bajram'), 'T-103');
+  assert.strictEqual(ids.forResolve('Alpet'), 'T-103');
 });
 
 test('secretStore reads the fallback, persists writes, and clears on reset', async () => {
@@ -87,11 +87,11 @@ test('createTicket and resolveTicket carry the paired ticket id', async () => {
   const deps = { api, secretStore: createSecretStore(), ticketIds: createTicketIds(0) };
 
   await createTicket(deps, { agent: 'Alpet', service: 'KFC' });
-  await resolveTicket(deps, { agent: 'Alpet', service: 'KFC' });
+  await resolveTicket(deps, { agent: 'Bajram', service: 'KFC' });
 
   assert.deepStrictEqual(payloads, [
     { type: 'ticket.created', agent: 'Alpet', service: 'KFC', priority: 'medium', ticketId: 'T-1' },
-    { type: 'ticket.resolved', agent: 'Alpet', service: 'KFC', ticketId: 'T-1' }
+    { type: 'ticket.resolved', agent: 'Bajram', service: 'KFC', ticketId: 'T-1' }
   ]);
 });
 
