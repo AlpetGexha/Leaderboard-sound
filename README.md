@@ -119,7 +119,8 @@ Fun features are independently configurable and default to enabled when a flag i
     "comebackAnnouncements": true,
     "endOfDayAwards": true,
     "urgentBossAnnouncements": true,
-    "teamCombos": true
+    "teamCombos": true,
+    "livingBoard": true
   },
   "featureSettings": {
     "comebackCooldownSeconds": 60,
@@ -139,6 +140,13 @@ Inbox Invasion visualizes today's unresolved created tickets (the eight oldest p
 Urgent Boss Announcements add fullscreen spawn and defeat callouts for `urgent` tickets. Customize their lines under `announcements.boss`. Team Combos count solves by the whole team inside `teamComboWindowSeconds`; each entry in `teamComboMilestones` configures the triggering count, title, and line. Disabling either feature does not affect solves or leaderboard scoring.
 
 At `awardsTime` in `timezone`, End-of-Day Awards freeze a closing snapshot while the live leaderboard continues until midnight. Each browser shows that day's ceremony once. Eligible categories are MVP (leaderboard winner), First Blood, Comeback Player (largest recovery from worst held rank), Service Specialist (most resolutions on one service), and Inbox Slayer (most matched resolutions). Empty categories are skipped; ties follow closing leaderboard order. Lines live under `announcements.awards` and support `{winner}`, `{title}`, and `{detail}`.
+
+Living Board adds ambient animation to the leaderboard itself: rows glow and
+trail when they overtake each other, every solve fires a particle burst on the
+scoring row, agents at 3/5/10 solves gain growing heat auras, and defeating an
+urgent ticket triggers a fullscreen shockwave with a brief screen shake.
+Disable it with `features.livingBoard: false`; `prefers-reduced-motion` users
+get none of the motion regardless.
 
 For deployment, prefer setting `WEBHOOK_SECRET` in the environment. It overrides `config.webhookSecret`.
 

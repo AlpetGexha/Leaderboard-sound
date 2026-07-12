@@ -9,7 +9,8 @@
     "comebackAnnouncements": true,
     "endOfDayAwards": true,
     "urgentBossAnnouncements": true,
-    "teamCombos": true
+    "teamCombos": true,
+    "livingBoard": true
   },
   "featureSettings": {
     "comebackCooldownSeconds": 60,
