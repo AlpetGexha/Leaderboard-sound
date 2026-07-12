@@ -105,3 +105,25 @@ test('useShockwave: a second urgent defeat bumps the shock counter again', async
   rerender({ effects: [{ type: 'monster_defeated', priority: 'urgent', id: 2 }] });
   assert.strictEqual(result.current.shock, 2);
 });
+
+test('useShockwave: an unrelated effects update during the shake window does not stall shaking=false', async () => {
+  const { useShockwave } = await import('../src/hooks/useShockwave.js');
+
+  const { result, rerender } = renderHook(({ effects }) => useShockwave(effects), {
+    initialProps: { effects: [] }
+  });
+
+  rerender({ effects: [{ type: 'monster_defeated', priority: 'urgent' }] });
+  assert.strictEqual(result.current.shock, 1);
+  assert.strictEqual(result.current.shaking, true);
+
+  // An unrelated snapshot update lands mid-shake (new array reference, no urgent defeat).
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  rerender({ effects: [{ type: 'new_ticket' }] });
+  assert.strictEqual(result.current.shock, 1);
+  assert.strictEqual(result.current.shaking, true, 'unrelated effects update should not cancel the pending shake reset');
+
+  // Wait past the original 600ms window (measured from the urgent defeat, not the unrelated update).
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 600)); });
+  assert.strictEqual(result.current.shaking, false, 'shaking should reset even though an unrelated update occurred mid-window');
+});

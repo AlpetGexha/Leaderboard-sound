@@ -8,10 +8,14 @@ export function useShockwave(effects) {
   useEffect(() => {
     if (!effects.some(isUrgentDefeat)) return undefined;
     setShock(id => id + 1);
+  }, [effects]);
+
+  useEffect(() => {
+    if (shock === 0) return undefined;
     setShaking(true);
     const timer = setTimeout(() => setShaking(false), 600);
     return () => clearTimeout(timer);
-  }, [effects]);
+  }, [shock]);
 
   return { shock, shaking };
 }
