@@ -59,6 +59,7 @@ export default function App() {
   return (
     <>
       <UnlockGate unlocked={unlocked} onUnlock={unlock} />
+      {fxEnabled ? <FxLayer bursts={bursts} shock={shock} /> : null}
       <div
         className={fxEnabled && shaking ? 'dashboard-shell shake' : 'dashboard-shell'}
         inert={!unlocked ? true : undefined}
@@ -82,7 +83,6 @@ export default function App() {
           : isSolveAnnouncement(current)
             ? <SolvePopup announcement={current} />
             : <MiniBanner announcement={current} />) : null}
-        {fxEnabled ? <FxLayer bursts={bursts} shock={shock} /> : null}
         <TestPanel snapshot={snapshot} />
       </div>
     </>
