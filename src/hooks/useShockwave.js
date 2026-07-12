@@ -1,21 +1,30 @@
 import { useEffect, useState } from 'react';
 import { isUrgentDefeat } from '../guards/fxGuards.js';
+import { isMonsterKillAnnouncement } from '../guards/announcementGuards.js';
 
-export function useShockwave(effects) {
+export function useShockwave(effects, announcement = null) {
   const [shock, setShock] = useState(0);
-  const [shaking, setShaking] = useState(false);
+  const [urgentShake, setUrgentShake] = useState(0);
+  const [urgentShaking, setUrgentShaking] = useState(false);
+  const monsterKillActive = isMonsterKillAnnouncement(announcement);
 
   useEffect(() => {
     if (!effects.some(isUrgentDefeat)) return undefined;
     setShock(id => id + 1);
+    setUrgentShake(id => id + 1);
   }, [effects]);
 
   useEffect(() => {
-    if (shock === 0) return undefined;
-    setShaking(true);
-    const timer = setTimeout(() => setShaking(false), 600);
+    if (urgentShake === 0) return undefined;
+    setUrgentShaking(true);
+    const timer = setTimeout(() => setUrgentShaking(false), 600);
     return () => clearTimeout(timer);
-  }, [shock]);
+  }, [urgentShake]);
 
-  return { shock, shaking };
+  useEffect(() => {
+    if (!monsterKillActive) return;
+    setShock(id => id + 1);
+  }, [monsterKillActive]);
+
+  return { shock, shaking: urgentShaking || monsterKillActive };
 }

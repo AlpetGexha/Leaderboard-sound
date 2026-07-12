@@ -9,7 +9,7 @@
     "comebackAnnouncements": true,
     "endOfDayAwards": true,
     "urgentBossAnnouncements": true,
-    "teamCombos": true,
+    "teamCombos": false,
     "livingBoard": true
   },
   "featureSettings": {
@@ -25,7 +25,9 @@
   "announcements": {
     "boss": {
       "spawned": "An urgent boss has entered the arena!",
-      "defeated": "The SLA Apocalypse has been defeated by {name}!"
+      "arrival": "Urgent Boss incoming! {name} opened a critical {service} ticket!",
+      "defeated": "The SLA Apocalypse has been defeated by {name}!",
+      "firstBloodDefeated": "First Blood! {name} has defeated the SLA Apocalypse on {service}!"
     },
     "comebacks": {
       "crown": "{name} has stolen the crown!",
@@ -33,7 +35,7 @@
       "climbing": "{name} is climbing the leaderboard!"
     },
     "awards": {
-      "mvp": "{winner} is today's MVP! {detail}",
+      "mvp": "Attention, attention everybody: today's MVP is {winner}! I repeat: today's MVP is {winner}!",
       "firstBlood": "{winner} wins First Blood! {detail}",
       "comebackPlayer": "{winner} is the Comeback Player! {detail}",
       "serviceSpecialist": "{winner} is the Service Specialist! {detail}",

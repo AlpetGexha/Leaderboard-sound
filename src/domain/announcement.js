@@ -1,5 +1,6 @@
 export const SAMPLE_KEYS = {
   first_blood: 'first_blood',
+  first_blood_boss_defeated: 'first_blood',
   new_ticket: 'new_ticket',
   1: 'solved',
   2: 'double_kill',
@@ -12,12 +13,16 @@ export const SAMPLE_KEYS = {
 };
 
 export function sampleKey(a) {
-  if (a.kind === 'tier') return SAMPLE_KEYS[a.count] || `tier_${a.count}`;
-  return SAMPLE_KEYS[a.kind] || a.kind;
+  const kind = a.sampleKind || a.kind;
+  const count = a.sampleCount ?? a.count;
+  if (kind === 'tier') return SAMPLE_KEYS[count] || `tier_${count}`;
+  return SAMPLE_KEYS[kind] || kind;
 }
 
 export function sampleFallbackMs(a) {
-  return a.kind === 'tier' && a.count >= 5 ? 900 : 650;
+  const kind = a.sampleKind || a.kind;
+  const count = a.sampleCount ?? a.count;
+  return kind === 'tier' && count >= 5 ? 900 : 650;
 }
 
 export function voiceLine(a) {

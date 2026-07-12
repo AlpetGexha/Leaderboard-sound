@@ -17,6 +17,15 @@ test('ticketIds pairs any resolve with the oldest open ticket', async () => {
   assert.strictEqual(ids.forResolve('Alpet'), 'T-103');
 });
 
+test('ticketIds restores visible active tickets after a browser refresh', async () => {
+  const { createTicketIds } = await import('../src/services/ticketIds.js');
+  const ids = createTicketIds(100);
+
+  ids.syncOpen(['T-55', 'T-56', 'T-55']);
+  assert.strictEqual(ids.forResolve('Alpet'), 'T-55');
+  assert.strictEqual(ids.forResolve('Bajram'), 'T-56');
+});
+
 test('secretStore reads the fallback, persists writes, and clears on reset', async () => {
   const { createSecretStore } = await import('../src/services/secretStore.js');
   const store = createSecretStore();

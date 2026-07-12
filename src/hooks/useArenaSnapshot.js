@@ -16,31 +16,58 @@ export function useArenaSnapshot({ onBeforeApply, onAfterApply }) {
 
   useEffect(() => {
     let cancelled = false;
+    let frameId = null;
+    let receivedStreamFrame = false;
+    let pendingFrames = [];
 
     // onBeforeApply configures the announcer and captures pre-render row
     // positions; onAfterApply enqueues announcements. Enqueue must follow
     // configure so a frame that introduces a sample plays it, matching the
     // original applySnapshot-then-enqueue order.
-    function apply(next) {
-      if (cancelled || !next) return;
+    function flush() {
+      frameId = null;
+      if (cancelled || !pendingFrames.length) return;
+
+      // Rendering every incoming event makes a busy arena monopolize the main
+      // thread. Keep the newest board state, but preserve every announcement
+      // and effect produced during this visual frame.
+      const frames = pendingFrames;
+      pendingFrames = [];
+      const latest = frames[frames.length - 1];
+      const next = {
+        ...latest,
+        announcements: frames.flatMap(frame => frame.announcements || []),
+        effects: frames.flatMap(frame => frame.effects || [])
+      };
       onBeforeApplyRef.current?.(next);
       setSnapshot(next);
       onAfterApplyRef.current?.(next);
     }
 
-    fetchState().then(apply);
+    function apply(next) {
+      if (cancelled || !next) return;
+      pendingFrames.push(next);
+      if (frameId === null) frameId = requestAnimationFrame(flush);
+    }
+
+    // SSE sends an initial snapshot. The fetch is only a fast fallback; once a
+    // stream frame arrives, a slower HTTP response must not replace newer data.
+    fetchState().then(next => {
+      if (!receivedStreamFrame) apply(next);
+    });
 
     const unsubscribe = subscribe({
-      onOpen: () => {
-        setLive(true);
-        fetchState().then(apply);
-      },
+      onOpen: () => setLive(true),
       onError: () => setLive(false),
-      onMessage: apply
+      onMessage: next => {
+        receivedStreamFrame = true;
+        apply(next);
+      }
     });
 
     return () => {
       cancelled = true;
+      if (frameId !== null) cancelAnimationFrame(frameId);
       unsubscribe();
     };
   }, []);

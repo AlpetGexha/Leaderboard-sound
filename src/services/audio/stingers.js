@@ -20,6 +20,19 @@ export function createStingers(engine) {
       noiseHit(0.55, 0.35, 0.18);
       return 1400;
     },
+    alert() {
+      // Alternating low/high pulses imitate an ambulance siren without
+      // requiring another sound asset to be downloaded by the browser.
+      tone(640, 0, 0.42, { type: 'sawtooth', gain: 0.22, slideTo: 760 });
+      tone(1040, 0.48, 0.42, { type: 'sawtooth', gain: 0.24, slideTo: 1180 });
+      tone(640, 0.96, 0.42, { type: 'sawtooth', gain: 0.22, slideTo: 760 });
+      tone(1040, 1.44, 0.42, { type: 'sawtooth', gain: 0.24, slideTo: 1180 });
+      tone(640, 1.92, 0.42, { type: 'sawtooth', gain: 0.22, slideTo: 760 });
+      noiseHit(0, 0.32, 0.16);
+      noiseHit(0.96, 0.32, 0.16);
+      noiseHit(1.92, 0.32, 0.16);
+      return 2400;
+    },
     tier(count) {
       noiseHit(0, 0.45, count >= 5 ? 0.32 : 0.22);
       tone(72, 0, 0.8, { type: 'sawtooth', gain: count >= 5 ? 0.3 : 0.22, slideTo: 42 });
@@ -41,10 +54,12 @@ export function createStingers(engine) {
 // A mapped MP3 sample always wins over a generated stinger.
 export function selectStinger(stingers, a, hasSample) {
   if (hasSample) return null;
-  if (a.kind === 'first_blood') return () => stingers.firstBlood();
-  if (a.kind === 'new_ticket') return null;
-  if (a.kind === 'tier') return a.count >= 2 ? () => stingers.tier(a.count) : () => stingers.solved();
-  if (a.kind === 'team_combo') return () => stingers.tier(a.count);
-  if (a.kind === 'urgent_boss_spawned' || a.kind === 'urgent_boss_defeated') return () => stingers.firstBlood();
+  const kind = a.sampleKind || a.kind;
+  const count = a.sampleCount ?? a.count;
+  if (kind === 'first_blood' || kind === 'first_blood_boss_defeated') return () => stingers.firstBlood();
+  if (kind === 'new_ticket') return null;
+  if (kind === 'tier') return count >= 2 ? () => stingers.tier(count) : () => stingers.solved();
+  if (kind === 'team_combo') return () => stingers.tier(count);
+  if (kind === 'urgent_boss_spawned' || kind === 'urgent_boss_defeated') return () => stingers.firstBlood();
   return null;
 }

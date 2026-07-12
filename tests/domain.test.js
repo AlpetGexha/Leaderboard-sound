@@ -32,6 +32,8 @@ test('sampleKey maps tier counts and kinds onto sample names', async () => {
   assert.strictEqual(sampleKey({ kind: 'tier', count: 15 }), 'monster_kill');
   assert.strictEqual(sampleKey({ kind: 'tier', count: 6 }), 'tier_6');
   assert.strictEqual(sampleKey({ kind: 'first_blood' }), 'first_blood');
+  assert.strictEqual(sampleKey({ kind: 'first_blood_boss_defeated' }), 'first_blood');
+  assert.strictEqual(sampleKey({ kind: 'resolve_highlight', sampleKind: 'tier', sampleCount: 2 }), 'double_kill');
   assert.strictEqual(sampleKey({ kind: 'new_ticket' }), 'new_ticket');
 });
 

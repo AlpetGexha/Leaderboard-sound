@@ -4,6 +4,7 @@ import { createDedupeGuard } from '../guards/announcementGuards.js';
 
 export function useAnnouncementQueue() {
   const [current, setCurrent] = useState(null);
+  const [queued, setQueued] = useState([]);
   const unlockedRef = useRef(false);
   const pendingAnnouncementsRef = useRef([]);
   const pendingCeremonyRef = useRef(null);
@@ -12,7 +13,8 @@ export function useAnnouncementQueue() {
 
   const announcer = useMemo(() => createAnnouncer({
     onShow: a => setCurrent(a),
-    onHide: () => setCurrent(null)
+    onHide: () => setCurrent(null),
+    onQueueChange: setQueued
   }), []);
 
   const enqueueCeremony = useCallback(ceremony => {
@@ -51,5 +53,5 @@ export function useAnnouncementQueue() {
     enqueueCeremony(pending);
   }, [announcer, enqueueCeremony]);
 
-  return { announcer, current, ingestFrame, unlock };
+  return { announcer, current, queued, ingestFrame, unlock };
 }

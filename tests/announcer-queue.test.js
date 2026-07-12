@@ -56,3 +56,45 @@ test('queue keeps draining after playOne throws', async () => {
 
   assert.deepStrictEqual(seen, ['a', 'b']);
 });
+
+test('queue reports the items that will play next', async () => {
+  const { createQueue } = await import('../src/services/announcer/queue.js');
+  const snapshots = [];
+  let release;
+  const queue = createQueue({
+    gapMs: 1,
+    playOne() { return new Promise(resolve => { release = resolve; }); },
+    onChange(items) { snapshots.push(items); }
+  });
+
+  queue.enqueue('first');
+  queue.enqueue('second');
+
+  assert.deepStrictEqual(snapshots, [['first'], [], ['second']]);
+  release();
+  await wait(20);
+  assert.deepStrictEqual(snapshots.at(-1), []);
+});
+
+test('queue drops the oldest pending items when the cap is reached', async () => {
+  const { createQueue } = await import('../src/services/announcer/queue.js');
+  let release;
+  const seen = [];
+  const queue = createQueue({
+    gapMs: 1,
+    maxPending: 2,
+    playOne(item) {
+      seen.push(item);
+      return new Promise(resolve => { release = resolve; });
+    }
+  });
+
+  queue.enqueue('playing');
+  queue.enqueue('stale');
+  queue.enqueue('newer');
+  queue.enqueue('newest');
+  release();
+  await wait(30);
+
+  assert.deepStrictEqual(seen, ['playing', 'newer']);
+});

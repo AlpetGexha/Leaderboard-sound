@@ -85,7 +85,7 @@ test('applyEvent accepts a new resolve and returns its announcements', () => {
   const event = { id: 'e1', type: 'ticket.resolved', agent: 'Alpet', service: 'KFC', ticketId: 'T-9', ts: 1 };
   const first = arena.applyEvent(event);
   assert.strictEqual(first.accepted, true);
-  assert.deepStrictEqual(first.announcements.map(announcement => announcement.title), ['FIRST BLOOD', 'SOLVED']);
+  assert.deepStrictEqual(first.announcements.map(announcement => announcement.title), ['FIRST BLOOD']);
 
   const duplicate = arena.applyEvent(event);
   assert.strictEqual(duplicate.accepted, false);
@@ -134,6 +134,36 @@ test('broadcast survives a client whose write throws and still reaches the other
 
   hub.broadcast({ day: 'y' });
   assert.strictEqual(good.length, 2);
+});
+
+test('broadcast drops a client that is already backpressured', () => {
+  const hub = createSseHub();
+  let closed = 0;
+  const slowClient = { writableNeedDrain: true, write() { throw new Error('should not write'); }, end() { closed += 1; } };
+  const good = [];
+  const goodClient = { write: frame => good.push(frame) };
+  hub.add(slowClient);
+  hub.add(goodClient);
+
+  hub.broadcast({ day: 'x' });
+
+  assert.strictEqual(closed, 1);
+  assert.strictEqual(hub.size, 1);
+  assert.deepStrictEqual(good, ['data: {"day":"x"}\n\n']);
+});
+
+test('coalesced broadcasts retain every announcement while sending the newest snapshot', async () => {
+  const hub = createSseHub();
+  const written = [];
+  hub.add({ write: frame => written.push(frame) });
+  hub.broadcastCoalesced({ day: 'old', announcements: [{ id: 'a' }], effects: [{ id: 'one' }] });
+  hub.broadcastCoalesced({ day: 'new', announcements: [{ id: 'b' }], effects: [{ id: 'two' }] });
+
+  await new Promise(resolve => setTimeout(resolve, 30));
+
+  assert.deepStrictEqual(written, [
+    'data: {"day":"new","announcements":[{"id":"a"},{"id":"b"}],"effects":[{"id":"one"},{"id":"two"}]}\n\n'
+  ]);
 });
 
 test('feature flags default true and explicit false is exposed', () => {

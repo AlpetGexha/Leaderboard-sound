@@ -51,9 +51,12 @@ test('dedupe guard pins the cap to 200 entries and trims to the newest 100', asy
 test('isBigAnnouncement selects the fullscreen overlay', async () => {
   const { isBigAnnouncement } = await import('../src/guards/announcementGuards.js');
   assert.strictEqual(isBigAnnouncement({ kind: 'first_blood' }), true);
+  assert.strictEqual(isBigAnnouncement({ kind: 'first_blood_boss_defeated' }), true);
+  assert.strictEqual(isBigAnnouncement({ kind: 'resolve_highlight' }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'tier', count: 2 }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'tier', count: 1 }), false);
   assert.strictEqual(isBigAnnouncement({ kind: 'new_ticket' }), false);
+  assert.strictEqual(isBigAnnouncement({ kind: 'urgent_boss_arrival' }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'urgent_boss_spawned' }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'urgent_boss_defeated' }), true);
   assert.strictEqual(isBigAnnouncement({ kind: 'team_combo', count: 3 }), true);
@@ -65,6 +68,13 @@ test('isSolveAnnouncement selects only the first resolved-ticket tier', async ()
   assert.strictEqual(isSolveAnnouncement({ kind: 'tier', count: 1 }), true);
   assert.strictEqual(isSolveAnnouncement({ kind: 'tier', count: 2 }), false);
   assert.strictEqual(isSolveAnnouncement({ kind: 'new_ticket' }), false);
+});
+
+test('isMonsterKillAnnouncement detects normal and combined Monster Kill announcements', async () => {
+  const { isMonsterKillAnnouncement } = await import('../src/guards/announcementGuards.js');
+  assert.strictEqual(isMonsterKillAnnouncement({ kind: 'tier', count: 15 }), true);
+  assert.strictEqual(isMonsterKillAnnouncement({ kind: 'resolve_highlight', sampleKind: 'tier', sampleCount: 15 }), true);
+  assert.strictEqual(isMonsterKillAnnouncement({ kind: 'tier', count: 10 }), false);
 });
 
 test('canSpeak requires tts enabled and non-empty text', async () => {

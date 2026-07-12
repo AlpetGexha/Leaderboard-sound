@@ -19,6 +19,7 @@ function fakeRowRefs(rects) {
 }
 
 const RECT = { top: 100, right: 200, height: 40 };
+const NO_EFFECTS = [];
 
 test('useBursts: first snapshot never fires a burst (previous === undefined)', async () => {
   const { useBursts } = await import('../src/hooks/useBursts.js');
@@ -104,6 +105,23 @@ test('useShockwave: a second urgent defeat bumps the shock counter again', async
 
   rerender({ effects: [{ type: 'monster_defeated', priority: 'urgent', id: 2 }] });
   assert.strictEqual(result.current.shock, 2);
+});
+
+test('useShockwave: Monster Kill shakes until its announcement finishes', async () => {
+  const { useShockwave } = await import('../src/hooks/useShockwave.js');
+  const { result, rerender } = renderHook(({ announcement }) => useShockwave(NO_EFFECTS, announcement), {
+    initialProps: { announcement: null }
+  });
+
+  rerender({ announcement: { kind: 'tier', count: 15 } });
+  assert.strictEqual(result.current.shock, 1);
+  assert.strictEqual(result.current.shaking, true);
+
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 700)); });
+  assert.strictEqual(result.current.shaking, true);
+
+  rerender({ announcement: null });
+  assert.strictEqual(result.current.shaking, false);
 });
 
 test('useShockwave: an unrelated effects update during the shake window does not stall shaking=false', async () => {

@@ -137,6 +137,7 @@ test('stingers return their advertised durations', async () => {
   assert.strictEqual(stingers.blip(), 260);
   assert.strictEqual(stingers.solved(), 480);
   assert.strictEqual(stingers.firstBlood(), 1400);
+  assert.strictEqual(stingers.alert(), 2400);
   // tier(2): endAt = 0.08 + 2 * 0.09 = 0.26 -> round((0.26 + 0.6) * 1000) = 860
   assert.strictEqual(stingers.tier(2), 860);
   // tier(10) clamps notes to 8: endAt = 0.08 + 8 * 0.09 = 0.80 -> 1400
@@ -153,7 +154,9 @@ test('selectStinger suppresses generated audio when a sample exists', async () =
   assert.strictEqual(selectStinger(stingers, { kind: 'unknown' }, false), null);
   assert.strictEqual(selectStinger(stingers, { kind: 'first_blood' }, false)(), 1400);
   assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 3 }, false)(), 860);
+  assert.strictEqual(selectStinger(stingers, { kind: 'resolve_highlight', sampleKind: 'tier', sampleCount: 3 }, false)(), 860);
   assert.strictEqual(selectStinger(stingers, { kind: 'tier', count: 1 }, false)(), 480);
+  assert.strictEqual(selectStinger(stingers, { kind: 'urgent_boss_arrival' }, false), null);
 });
 
 test('createSample builds an audio element only when the profile maps the key', async () => {

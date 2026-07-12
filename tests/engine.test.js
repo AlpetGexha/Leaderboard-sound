@@ -29,8 +29,9 @@ test('first blood is awarded to the first solved ticket, not the first opened ti
   assert.strictEqual(publicState(s).firstBlood, null);
 
   const r3 = applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-2', 3000));
-  const firstBlood = r3.announcements.find(item => item.kind === 'first_blood');
-  assert.strictEqual(firstBlood.announcementId, 'e3:first_blood');
+  const firstBlood = r3.announcements.find(item => item.kind === 'resolve_highlight');
+  assert.strictEqual(firstBlood.announcementId, 'e3:resolve_highlight');
+  assert.deepStrictEqual(firstBlood.sourceKinds, ['first_blood']);
   assert.match(firstBlood.line, /First blood on Billing by Alpet/i);
   assert.deepStrictEqual(publicState(s).firstBlood, { agent: 'Alpet', service: 'Billing', ts: 3000 });
 });
@@ -54,16 +55,29 @@ test('invasion snapshot preserves created-ticket priority and defaults legacy ev
 test('urgent bosses announce spawn and matching defeat, with an independent disable flag', () => {
   const s = createDay(AGENTS);
   const opened = applyEvent(s, { ...ev('ticket.created', 'Alpet', 'BOSS-1', 1000), priority: 'urgent' });
-  assert.deepStrictEqual(opened.announcements.map(item => item.kind), ['new_ticket', 'urgent_boss_spawned']);
+  assert.deepStrictEqual(opened.announcements.map(item => item.kind), ['urgent_boss_arrival']);
+  assert.strictEqual(opened.announcements[0].announcementId, `${opened.announcements[0].eventId}:urgent_boss_arrival`);
+  assert.match(opened.announcements[0].line, /Alpet.*Billing/i);
   const defeated = applyEvent(s, ev('ticket.resolved', 'Bajram', 'BOSS-1', 2000));
-  assert.ok(defeated.announcements.some(item => item.kind === 'urgent_boss_defeated'));
-  assert.match(defeated.announcements.find(item => item.kind === 'urgent_boss_defeated').line, /Bajram/);
+  const combined = defeated.announcements.find(item => item.kind === 'resolve_highlight');
+  assert.strictEqual(combined.announcementId, `${combined.eventId}:resolve_highlight`);
+  assert.match(combined.line, /Bajram/);
+  assert.deepStrictEqual(combined.sourceKinds, ['first_blood_boss_defeated', 'comeback']);
 
   const disabled = createDay(AGENTS);
   const result = applyEvent(disabled,
     { ...ev('ticket.created', 'Alpet', 'BOSS-2', 3000), priority: 'urgent' },
     { urgentBossAnnouncements: false });
   assert.strictEqual(result.announcements.some(item => item.kind.startsWith('urgent_boss')), false);
+});
+
+test('later urgent boss defeats retain their boss announcement and solve tier', () => {
+  const s = createDay(AGENTS);
+  applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-1', 500));
+  applyEvent(s, { ...ev('ticket.created', 'Alpet', 'BOSS-3', 1000), priority: 'urgent' });
+  const defeated = applyEvent(s, ev('ticket.resolved', 'Bajram', 'BOSS-3', 2000));
+  assert.deepStrictEqual(defeated.announcements.map(item => item.kind), ['resolve_highlight']);
+  assert.deepStrictEqual(defeated.announcements[0].sourceKinds, ['urgent_boss_defeated']);
 });
 
 test('team combo milestones and time window are configurable and independently disabled', () => {
@@ -74,18 +88,19 @@ test('team combo milestones and time window are configurable and independently d
   const s = createDay(AGENTS);
   applyEvent(s, ev('ticket.resolved', 'Alpet', 'C-1', 1000), options);
   const combo = applyEvent(s, ev('ticket.resolved', 'Bajram', 'C-2', 5000), options);
-  const announcement = combo.announcements.find(item => item.kind === 'team_combo');
+  const announcement = combo.announcements.find(item => item.kind === 'resolve_highlight');
   assert.strictEqual(announcement.title, 'DUO');
-  assert.strictEqual(announcement.line, 'Team combo 2!');
+  assert.match(announcement.line, /Team combo 2!/);
+  assert.deepStrictEqual(announcement.sourceKinds, ['team_combo']);
 
   applyEvent(s, ev('ticket.resolved', 'Ermira', 'C-3', 11_000), options);
   const restarted = applyEvent(s, ev('ticket.resolved', 'Mirlind', 'C-4', 12_000), options);
-  assert.strictEqual(restarted.announcements.some(item => item.kind === 'team_combo'), true);
+  assert.strictEqual(restarted.announcements.some(item => item.sourceKinds?.includes('team_combo')), true);
 
   const disabled = createDay(AGENTS);
   applyEvent(disabled, ev('ticket.resolved', 'Alpet', 'D-1', 1000), { ...options, teamCombos: false });
   const result = applyEvent(disabled, ev('ticket.resolved', 'Bajram', 'D-2', 2000), { ...options, teamCombos: false });
-  assert.strictEqual(result.announcements.some(item => item.kind === 'team_combo'), false);
+  assert.strictEqual(result.announcements.some(item => item.sourceKinds?.includes('team_combo')), false);
 });
 
 test('solving a spawned ticket defeats its matching monster, regardless of solver', () => {
@@ -113,10 +128,13 @@ test('resolves increment count and fire a tier announcement every time, falling 
   for (let i = 1; i <= 15; i++) {
     const r = applyEvent(s, ev('ticket.resolved', 'Kushtrim', `T-${i}`, i * 1000));
     assert.strictEqual(r.accepted, true);
-    for (const a of r.announcements.filter(item => item.kind === 'tier')) titles.push(`${a.count}:${a.title}`);
+    for (const a of r.announcements) {
+      if (a.kind === 'tier') titles.push(`${a.count}:${a.title}`);
+      if (a.kind === 'resolve_highlight' && a.sampleKind === 'tier') titles.push(`${a.sampleCount}:${a.title.split(' — ')[0]}`);
+    }
   }
   assert.deepStrictEqual(titles, [
-    '1:SOLVED', '2:DOUBLE KILL', '3:TRIPLE KILL', '4:KILLING SPREE',
+    '2:DOUBLE KILL', '3:TRIPLE KILL', '4:KILLING SPREE',
     '5:UNSTOPPABLE', '6:SOLVED', '7:RAMPAGE', '8:SOLVED', '9:SOLVED', '10:GODLIKE',
     '11:SOLVED', '12:SOLVED', '13:SOLVED', '14:SOLVED', '15:MONSTER KILL'
   ]);
@@ -141,10 +159,10 @@ test('announcement templates can customize lines with event placeholders', () =>
       1: { name: 'FLAG CAPTURED', line: '{name} captured {service} flag {ticketId}' }
     }
   });
-  assert.strictEqual(r2.announcements.find(item => item.kind === 'first_blood').line,
-    'Transmission: Ermira solved CTF ticket T-1');
-  assert.strictEqual(r2.announcements.find(item => item.kind === 'tier').title, 'FLAG CAPTURED');
-  assert.strictEqual(r2.announcements.find(item => item.kind === 'tier').line, 'Ermira captured CTF flag T-1');
+  const highlight = r2.announcements.find(item => item.kind === 'resolve_highlight');
+  assert.strictEqual(highlight.title, 'FIRST BLOOD — FLAG CAPTURED — CROWN STOLEN');
+  assert.match(highlight.line, /Transmission: Ermira solved CTF ticket T-1/);
+  assert.match(highlight.line, /Ermira captured CTF flag T-1/);
 });
 
 test('announcement templates can speak title by agent on service', () => {
@@ -156,9 +174,24 @@ test('announcement templates can speak title by agent on service', () => {
     }
   });
 
-  const tier = r.announcements.find(item => item.kind === 'tier');
-  assert.strictEqual(tier.line, 'SOLVED, By Alpet on KFC');
-  assert.strictEqual(tier.announcementId, `${event.id}:tier:1`);
+  const highlight = r.announcements.find(item => item.kind === 'resolve_highlight');
+  assert.strictEqual(highlight.line, 'First blood on KFC by Alpet');
+  assert.strictEqual(highlight.announcementId, `${event.id}:resolve_highlight`);
+});
+
+test('a resolve with boss, combo, and comeback is consolidated into one announcement', () => {
+  const s = createDay(AGENTS);
+  applyEvent(s, ev('ticket.resolved', 'Alpet', 'T-1', 500));
+  applyEvent(s, ev('ticket.resolved', 'Bajram', 'T-2', 1000));
+  applyEvent(s, ev('ticket.resolved', 'Kushtrim', 'T-3', 1500));
+  applyEvent(s, ev('ticket.resolved', 'Mirlind', 'T-4', 1750));
+  applyEvent(s, { ...ev('ticket.created', 'Mirlind', 'BOSS-4', 1900), priority: 'urgent' });
+  const result = applyEvent(s, ev('ticket.resolved', 'Mirlind', 'BOSS-4', 2000), {
+    teamComboMilestones: [{ count: 5, title: 'TEAM STRIKE', line: 'Team Strike!' }]
+  });
+  assert.strictEqual(result.announcements.length, 1);
+  assert.deepStrictEqual(result.announcements[0].sourceKinds, ['tier', 'urgent_boss_defeated', 'team_combo', 'comeback']);
+  assert.match(result.announcements[0].title, /DOUBLE KILL.*BOSS DEFEATED.*TEAM STRIKE.*CROWN STOLEN/);
 });
 
 test('a ticketId can only be resolved once (reopens ignored)', () => {

@@ -47,6 +47,24 @@ test('renders the snapshot leaderboard and fallback test panel options', async (
   assert.ok(screen.getAllByRole('button', { name: 'resolve', exact: false }).length >= 1);
 });
 
+test('the visible mobile-friendly test-panel launcher opens and closes the controls', async () => {
+  await renderApp();
+  await screen.findAllByText('Alpet');
+  fireEvent.click(screen.getByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'OPEN TEST PANEL' }));
+  assert.ok(await screen.findByRole('button', { name: 'Close' }));
+  assert.strictEqual(screen.queryByRole('button', { name: 'OPEN TEST PANEL' }), null);
+
+  fireEvent.click(screen.getByRole('button', { name: 'PREVIEW ANY EVENT' }));
+  assert.ok(screen.getByRole('button', { name: 'Monster Kill' }));
+  fireEvent.click(screen.getByRole('button', { name: 'HIDE EVENT PREVIEW' }));
+  assert.strictEqual(screen.queryByRole('button', { name: 'Monster Kill' }), null);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  assert.ok(screen.getByRole('button', { name: 'OPEN TEST PANEL' }));
+});
+
 test('test panel retries once with default secret after a stale saved secret is rejected', async () => {
   const calls = [];
   window.localStorage.setItem('arena-secret', 'old-secret');
@@ -201,6 +219,9 @@ test('inbox invasion is omitted when its independent feature flag is false', asy
     config: { features: { inboxInvasion: false }, agents: ['Alpet', 'Bajram'], services: ['KFC'] }
   };
   await renderApp(snapshot);
+  // Snapshot updates are intentionally frame-batched so a busy live stream
+  // cannot force one render per event.
+  await screen.findAllByText('Alpet');
   fireEvent.click(await screen.findByRole('button', { name: 'CLICK TO ARM SPEAKERS' }));
   assert.strictEqual(screen.queryByRole('heading', { name: 'INBOX INVASION' }), null);
 });

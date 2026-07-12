@@ -20,12 +20,19 @@ export function createDedupeGuard({ max = SEEN_MAX, keep = SEEN_KEEP } = {}) {
 
 export function isBigAnnouncement(a) {
   if (!a) return false;
-  return a.kind === 'first_blood' || a.kind === 'award' || a.kind === 'urgent_boss_spawned' ||
+  return a.kind === 'first_blood' || a.kind === 'first_blood_boss_defeated' || a.kind === 'resolve_highlight' || a.kind === 'award' || a.kind === 'urgent_boss_arrival' || a.kind === 'urgent_boss_spawned' ||
     a.kind === 'urgent_boss_defeated' || a.kind === 'team_combo' || (a.kind === 'tier' && a.count >= 2);
 }
 
 export function isSolveAnnouncement(a) {
   return Boolean(a && a.kind === 'tier' && a.count === 1);
+}
+
+export function isMonsterKillAnnouncement(a) {
+  return Boolean(a && (
+    (a.kind === 'tier' && a.count === 15) ||
+    (a.sampleKind === 'tier' && a.sampleCount === 15)
+  ));
 }
 
 export function canSpeak(profile, text) {

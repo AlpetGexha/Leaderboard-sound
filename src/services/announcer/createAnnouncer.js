@@ -10,10 +10,11 @@ import { createQueue } from './queue.js';
 const GAP_MS = 2000;
 const DEFAULT_TRANSMISSION_LEAD_MS = 2000;
 const TAIL_MS = 400;
+const MAX_PENDING_ANNOUNCEMENTS = 24;
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-export function createAnnouncer({ onShow = () => {}, onHide = () => {} } = {}) {
+export function createAnnouncer({ onShow = () => {}, onHide = () => {}, onQueueChange = () => {} } = {}) {
   const engine = createAudioContext();
   const stingers = createStingers(engine);
   let profile = DEFAULT_PROFILE;
@@ -55,18 +56,26 @@ export function createAnnouncer({ onShow = () => {}, onHide = () => {} } = {}) {
     return play ? play() : 0;
   }
 
+  function playUrgentAlert(a) {
+    if (!engine.isReady() || a.kind !== 'urgent_boss_arrival') return 0;
+    return stingers.alert();
+  }
+
   async function playOne(a) {
     let transmissionAudio = null;
     try {
+      const alertMs = playUrgentAlert(a);
+      if (alertMs) await delay(alertMs);
       onShow(a);
       const sampleAudio = createSample(a, profile);
       const hasSample = Boolean(sampleAudio);
       const sampleMs = await measuredAudioMs(sampleAudio, sampleFallbackMs(a));
+      const urgentArrival = a.kind === 'urgent_boss_arrival';
       transmissionAudio = startTransmission();
       const leadMs = transmissionAudio ? profile.transmission.leadMs ?? DEFAULT_TRANSMISSION_LEAD_MS : 0;
       if (leadMs) await delay(leadMs);
       playAudio(sampleAudio);
-      const stingerMs = playStinger(a, hasSample);
+      const stingerMs = urgentArrival ? 0 : playStinger(a, hasSample);
       await delay(Math.max(sampleMs, stingerMs));
       await playAiVoice(a, profile);
       await delay(TAIL_MS);
@@ -76,7 +85,10 @@ export function createAnnouncer({ onShow = () => {}, onHide = () => {} } = {}) {
     }
   }
 
-  const queue = createQueue({ gapMs: GAP_MS, playOne });
+  const queue = createQueue({
+    gapMs: GAP_MS, playOne, onChange: onQueueChange,
+    maxPending: MAX_PENDING_ANNOUNCEMENTS
+  });
 
   return {
     configure,

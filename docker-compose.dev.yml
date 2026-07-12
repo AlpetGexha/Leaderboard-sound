@@ -3,6 +3,7 @@ services:
     build:
       dockerfile: Dockerfile.dev
     ports: !override
+      - "80:5173"
       - "3000:3000"
       - "5173:5173"
     volumes:

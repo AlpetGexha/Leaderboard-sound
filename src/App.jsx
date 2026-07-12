@@ -22,7 +22,7 @@ const EMPTY_EFFECTS = [];
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
-  const { announcer, current, ingestFrame, unlock: unlockAnnouncer } = useAnnouncementQueue();
+  const { announcer, current, queued, ingestFrame, unlock: unlockAnnouncer } = useAnnouncementQueue();
   const { rowRefs, captureOldTops, applyFlip } = useFlipAnimation();
   const { scoredAgents, clearScored, resetScores, syncSolved } = useScoreFlash();
   const { bursts, syncBursts, resetBursts } = useBursts(rowRefs);
@@ -40,7 +40,10 @@ export default function App() {
   const { snapshot, live } = useArenaSnapshot({ onBeforeApply, onAfterApply });
 
   const fxEnabled = snapshot?.config?.features?.livingBoard !== false;
-  const { shock, shaking } = useShockwave(fxEnabled ? snapshot?.effects || EMPTY_EFFECTS : EMPTY_EFFECTS);
+  const { shock, shaking } = useShockwave(
+    fxEnabled ? snapshot?.effects || EMPTY_EFFECTS : EMPTY_EFFECTS,
+    fxEnabled ? current : null
+  );
 
   useLayoutEffect(() => {
     if (!snapshot) return;
@@ -64,29 +67,36 @@ export default function App() {
       <UnlockGate unlocked={unlocked} onUnlock={unlock} />
       {fxEnabled ? <FxLayer bursts={bursts} shock={shock} /> : null}
       <div
-        className={fxEnabled && shaking ? 'dashboard-shell shake' : 'dashboard-shell'}
+        className="dashboard-shell"
         inert={!unlocked ? true : undefined}
         aria-hidden={!unlocked}
       >
-        <Header snapshot={snapshot} live={live} />
-        {snapshot?.config?.features?.inboxInvasion !== false
-          ? <InboxInvasion invasion={state.invasion} effects={snapshot?.effects || EMPTY_EFFECTS} /> : null}
-        <main>
-          <Leaderboard
-            rows={state.leaderboard}
-            rowRefs={rowRefs}
-            scoredAgents={scoredAgents}
-            onScoreAnimationEnd={clearScored}
-            fxEnabled={fxEnabled}
-          />
-          <KillFeed feed={state.feed} />
-        </main>
+        <div className={fxEnabled && shaking ? 'dashboard-content shake' : 'dashboard-content'}>
+          <Header snapshot={snapshot} live={live} />
+          {snapshot?.config?.features?.inboxInvasion !== false
+            ? <InboxInvasion invasion={state.invasion} effects={snapshot?.effects || EMPTY_EFFECTS} /> : null}
+          <main>
+            <Leaderboard
+              rows={state.leaderboard}
+              rowRefs={rowRefs}
+              scoredAgents={scoredAgents}
+              onScoreAnimationEnd={clearScored}
+              fxEnabled={fxEnabled}
+            />
+            <KillFeed feed={state.feed} />
+          </main>
+        </div>
         {current ? (isBigAnnouncement(current)
           ? <AnnouncementOverlay announcement={current} />
           : isSolveAnnouncement(current)
             ? <SolvePopup announcement={current} />
             : <MiniBanner announcement={current} />) : null}
-        <TestPanel snapshot={snapshot} />
+        <TestPanel
+          snapshot={snapshot}
+          currentAnnouncement={current}
+          queuedAnnouncements={queued}
+          onPreview={announcement => announcer.enqueue(announcement)}
+        />
       </div>
     </>
   );
