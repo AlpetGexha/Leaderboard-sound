@@ -1,17 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
+import { agentsWithIncreasedSolved, solvedMapFrom } from '../domain/scoring.js';
 
 export function useScoreFlash() {
   const [scoredAgents, setScoredAgents] = useState(() => new Set());
   const lastSolvedRef = useRef({});
 
   const syncSolved = useCallback(leaderboard => {
-    const increased = new Set();
-    for (const row of leaderboard) {
-      const previous = lastSolvedRef.current[row.agent];
-      if (previous !== undefined && row.solved > previous) increased.add(row.agent);
-    }
-    if (increased.size) setScoredAgents(increased);
-    lastSolvedRef.current = Object.fromEntries(leaderboard.map(row => [row.agent, row.solved]));
+    const increased = agentsWithIncreasedSolved(leaderboard, lastSolvedRef.current);
+    if (increased.length) setScoredAgents(new Set(increased));
+    lastSolvedRef.current = solvedMapFrom(leaderboard);
   }, []);
 
   const resetScores = useCallback(() => {

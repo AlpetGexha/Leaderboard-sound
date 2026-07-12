@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useState } from 'react';
+import { isMonsterDefeated, isMonsterSpawned } from '../guards/fxGuards.js';
 
 const PRIORITY_MONSTERS = {
   low: { emoji: '🦠', title: 'Tiny Queue Slime', hue: 145 },
@@ -21,10 +22,10 @@ export function monsterFor(service, priority = 'medium') {
 
 export const InboxInvasion = memo(function InboxInvasion({ invasion, effects }) {
   const [defeats, setDefeats] = useState([]);
-  const spawned = new Set(effects.filter(e => e.type === 'monster_spawned').map(e => e.ticketId));
+  const spawned = new Set(effects.filter(isMonsterSpawned).map(e => e.ticketId));
 
   useEffect(() => {
-    const next = effects.filter(e => e.type === 'monster_defeated');
+    const next = effects.filter(isMonsterDefeated);
     if (!next.length) return undefined;
     setDefeats(current => [...current, ...next]);
     const timer = setTimeout(() => setDefeats(current => current.filter(item => !next.includes(item))), 900);

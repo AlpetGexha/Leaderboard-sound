@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { burstParticles } from '../domain/fx.js';
+import { agentsWithIncreasedSolved, solvedMapFrom } from '../domain/scoring.js';
 
 export function useBursts(rowRefs) {
   const [bursts, setBursts] = useState([]);
@@ -8,10 +9,8 @@ export function useBursts(rowRefs) {
 
   const syncBursts = useCallback(leaderboard => {
     const next = [];
-    for (const row of leaderboard) {
-      const previous = lastSolvedRef.current[row.agent];
-      if (previous === undefined || row.solved <= previous) continue;
-      const node = rowRefs.current.get(row.agent);
+    for (const agent of agentsWithIncreasedSolved(leaderboard, lastSolvedRef.current)) {
+      const node = rowRefs.current.get(agent);
       if (!node) continue;
       const rect = node.getBoundingClientRect();
       next.push({
@@ -21,7 +20,7 @@ export function useBursts(rowRefs) {
         particles: burstParticles()
       });
     }
-    lastSolvedRef.current = Object.fromEntries(leaderboard.map(row => [row.agent, row.solved]));
+    lastSolvedRef.current = solvedMapFrom(leaderboard);
     if (!next.length) return;
     setBursts(current => [...current, ...next]);
     setTimeout(() => setBursts(current => current.filter(burst => !next.includes(burst))), 1100);

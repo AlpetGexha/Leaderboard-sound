@@ -14,6 +14,17 @@ export function useFlipAnimation() {
   const applyFlip = useCallback(() => {
     const oldTops = oldTopsRef.current;
     const pendingCleanup = pendingCleanupRef.current;
+    // Prune listeners for nodes no longer present in rowRefs (e.g. an agent
+    // dropped from the roster mid-transition, whose transitionend never
+    // fires), so the Map can't grow unbounded and hold detached DOM nodes.
+    if (pendingCleanup.size) {
+      const liveNodes = new Set(rowRefs.current.values());
+      for (const [node, cleanupFn] of pendingCleanup) {
+        if (liveNodes.has(node)) continue;
+        node.removeEventListener('transitionend', cleanupFn);
+        pendingCleanup.delete(node);
+      }
+    }
     for (const [agent, node] of rowRefs.current.entries()) {
       const oldTop = oldTops[agent];
       if (oldTop === undefined) continue;
