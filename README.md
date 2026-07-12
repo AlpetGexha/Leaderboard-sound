@@ -1,8 +1,80 @@
-# Ticket Arena
+# 🎧 Ticket Arena — Turn Support Tickets Into a Live Team Battle
 
-FPS-style live leaderboard for a 5-person support-ticket team. Helpdesk webhook events update a daily leaderboard, trigger SSE broadcasts, play synthesized stingers, speak announcer lines, and show fullscreen or mini banners in the browser.
+**A real-time, FPS-inspired support leaderboard with kill streaks, urgent-ticket boss battles, animated rankings, and AI announcer voices.**
 
-The app keeps a small backend: a Node.js HTTP server, append-only JSONL storage, and a React/Vite frontend built into `dist/`.
+Ticket Arena turns everyday helpdesk activity into an energetic team experience. Send it a `ticket.created` or `ticket.resolved` webhook and the board updates instantly, scores the responsible agent, tracks the team's open-ticket invasion, and celebrates milestones with fullscreen visuals, sound effects, and generated voice lines.
+
+<p align="center">
+  <img src="screenshots/Ticket%20LandingPage.png" alt="Ticket Arena live leaderboard landing page" width="100%">
+</p>
+
+## What it does
+
+- **Live leaderboard:** every browser receives score, rank, streak, and activity updates through Server-Sent Events.
+- **FPS-style achievements:** resolutions unlock Double Kill, Triple Kill, Killing Spree, Unstoppable, Rampage, Dominating, and Monster Kill callouts.
+- **Inbox Invasion:** unresolved tickets appear as enemies on the battlefield; resolving one removes it from the board.
+- **Urgent Boss battles:** urgent tickets enter as bosses and trigger special arrival and defeat sequences.
+- **AI voice announcer:** Fish Audio generates event-specific lines with agent and service names, while local MP3 stingers add game-style impact. A browser voice is used as fallback.
+- **Living Board:** overtakes, solve bursts, heat auras, shockwaves, and screen shake make team progress visible from across the room.
+- **Comebacks, combos, and awards:** configurable comeback announcements, team streaks, and an end-of-day awards ceremony keep the whole team involved.
+- **Easy integration:** a small Node.js webhook API, React/Vite interface, Docker setup, persistent event log, and editable JSON configuration.
+
+## See it in action
+
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="screenshots/First%20Blood.png" alt="First Blood announcement"><br><strong>First Blood</strong><br>The first ticket event opens the day with a full-screen announcement.</td>
+    <td width="50%" align="center"><img src="screenshots/Urgent%20Boos.png" alt="Urgent Boss incoming announcement"><br><strong>Urgent Boss Incoming</strong><br>Critical work becomes a boss battle the team can see immediately.</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="screenshots/Boss%20defetet.png" alt="Urgent Boss defeated announcement"><br><strong>Boss Defeated</strong><br>Closing the urgent ticket triggers a dedicated victory sequence.</td>
+    <td width="50%" align="center"><img src="screenshots/Killing%20spre.png" alt="Killing Spree achievement"><br><strong>Killing Spree</strong><br>Resolution milestones reward momentum with escalating callouts.</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="screenshots/Unstapoble.png" alt="Unstoppable achievement"><br><strong>Unstoppable</strong><br>Higher streaks bring stronger visuals, voices, and effects.</td>
+    <td width="50%" align="center"><img src="screenshots/MonsterKill.png" alt="Monster Kill achievement"><br><strong>Monster Kill</strong><br>The 15-resolution milestone is the board's biggest individual callout.</td>
+  </tr>
+</table>
+
+<details>
+  <summary><strong>More screenshots</strong></summary>
+  <br>
+  <img src="screenshots/Normal%20unstable.png" alt="Ticket Arena leaderboard during normal play" width="100%">
+</details>
+
+## Hear the announcer
+
+These are real AI-generated voice lines cached by Ticket Arena. Press play to preview the same personalized announcements heard in the app.
+
+**First Blood — “FIRST BLOOD, by Alpet on KFC”**
+
+<audio controls src="docs/demo/audio/first-blood-alpet-kfc.mp3">[Play the First Blood voice sample](docs/demo/audio/first-blood-alpet-kfc.mp3)</audio>
+
+[🔊 Open First Blood MP3](docs/demo/audio/first-blood-alpet-kfc.mp3)
+
+**Double Kill — “DOUBLE KILL, by Bajram on KFC”**
+
+<audio controls src="docs/demo/audio/double-kill-bajram-kfc.mp3">[Play the Double Kill voice sample](docs/demo/audio/double-kill-bajram-kfc.mp3)</audio>
+
+[🔊 Open Double Kill MP3](docs/demo/audio/double-kill-bajram-kfc.mp3)
+
+**Monster Kill — “MONSTER KILL, by Alpet on KFC”**
+
+<audio controls src="docs/demo/audio/monster-kill-alpet-kfc.mp3">[Play the Monster Kill voice sample](docs/demo/audio/monster-kill-alpet-kfc.mp3)</audio>
+
+[🔊 Open Monster Kill MP3](docs/demo/audio/monster-kill-alpet-kfc.mp3)
+
+> GitHub may show either an inline player or the linked MP3 preview, depending on the browser. Both use the same tracked demo files.
+
+## How it works
+
+```text
+Helpdesk webhook → Node.js event engine → JSONL persistence
+                              ├─→ live SSE update → React leaderboard
+                              └─→ announcement → stinger + AI voice
+```
+
+The backend remains deliberately small: a Node.js HTTP server, append-only JSONL storage, and a React/Vite frontend built into `dist/`. Existing helpdesk systems only need to send the two webhook event types described below.
 
 ## Quick Start
 
