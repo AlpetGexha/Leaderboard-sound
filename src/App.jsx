@@ -39,14 +39,17 @@ export default function App() {
 
   const { snapshot, live } = useArenaSnapshot({ onBeforeApply, onAfterApply });
 
-  const { shock, shaking } = useShockwave(snapshot?.effects || EMPTY_EFFECTS);
   const fxEnabled = snapshot?.config?.features?.livingBoard !== false;
+  const { shock, shaking } = useShockwave(fxEnabled ? snapshot?.effects || EMPTY_EFFECTS : EMPTY_EFFECTS);
 
   useLayoutEffect(() => {
     if (!snapshot) return;
+    // Bursts must measure rows before applyFlip applies its FLIP invert
+    // transform, or a row that both solves and re-ranks in the same update
+    // reads its old (pre-move) position instead of where it now sits.
+    if (fxEnabled) syncBursts(snapshot.state.leaderboard);
     applyFlip();
     syncSolved(snapshot.state.leaderboard);
-    if (fxEnabled) syncBursts(snapshot.state.leaderboard);
   }, [snapshot, applyFlip, syncSolved, syncBursts, fxEnabled]);
 
   const state = snapshot?.state || EMPTY_STATE;

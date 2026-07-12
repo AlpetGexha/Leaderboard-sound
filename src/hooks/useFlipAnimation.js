@@ -22,7 +22,11 @@ export function useFlipAnimation() {
       const direction = delta > 0 ? 'moving-up' : 'moving-down';
       const prevCleanup = pendingCleanup.get(node);
       if (prevCleanup) node.removeEventListener('transitionend', prevCleanup);
-      node.classList.remove('moving-up', 'moving-down');
+      // Drop 'moving' (not just the direction classes) before re-setting the
+      // invert transform: 'moving' carries the transition, so if it stayed
+      // attached this assignment would animate instead of snapping, breaking
+      // FLIP's invert step for a row that re-ranks again mid-transition.
+      node.classList.remove('moving', 'moving-up', 'moving-down');
       node.style.transform = `translateY(${delta}px)`;
       requestAnimationFrame(() => {
         node.classList.add('moving', direction);

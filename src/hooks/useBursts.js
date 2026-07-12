@@ -1,11 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { burstParticles } from '../domain/fx.js';
 
-let burstSeq = 0;
-
 export function useBursts(rowRefs) {
   const [bursts, setBursts] = useState([]);
   const lastSolvedRef = useRef({});
+  const burstSeqRef = useRef(0);
 
   const syncBursts = useCallback(leaderboard => {
     const next = [];
@@ -16,7 +15,7 @@ export function useBursts(rowRefs) {
       if (!node) continue;
       const rect = node.getBoundingClientRect();
       next.push({
-        id: `burst-${++burstSeq}`,
+        id: `burst-${++burstSeqRef.current}`,
         x: rect.right - 48,
         y: rect.top + rect.height / 2,
         particles: burstParticles()
