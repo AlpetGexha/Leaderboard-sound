@@ -17,11 +17,12 @@ export function useFlipAnimation() {
       if (oldTop === undefined) continue;
       const delta = oldTop - node.getBoundingClientRect().top;
       if (!delta) continue;
+      const direction = delta > 0 ? 'moving-up' : 'moving-down';
       node.style.transform = `translateY(${delta}px)`;
       requestAnimationFrame(() => {
-        node.classList.add('moving');
+        node.classList.add('moving', direction);
         node.style.transform = '';
-        node.addEventListener('transitionend', () => node.classList.remove('moving'), { once: true });
+        node.addEventListener('transitionend', () => node.classList.remove('moving', direction), { once: true });
       });
     }
   }, []);
