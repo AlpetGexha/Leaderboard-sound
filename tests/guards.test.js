@@ -74,3 +74,12 @@ test('canSpeak requires tts enabled and non-empty text', async () => {
   assert.strictEqual(canSpeak({ tts: { enabled: false } }, 'hi'), false);
   assert.strictEqual(canSpeak({}, 'hi'), false);
 });
+
+test('isUrgentDefeat fires only for urgent monster_defeated effects', async () => {
+  const { isUrgentDefeat } = await import('../src/guards/fxGuards.js');
+  assert.strictEqual(isUrgentDefeat({ type: 'monster_defeated', priority: 'urgent' }), true);
+  assert.strictEqual(isUrgentDefeat({ type: 'monster_defeated', priority: 'medium' }), false);
+  assert.strictEqual(isUrgentDefeat({ type: 'monster_defeated' }), false);
+  assert.strictEqual(isUrgentDefeat({ type: 'monster_spawned', priority: 'urgent' }), false);
+  assert.strictEqual(isUrgentDefeat(null), false);
+});
