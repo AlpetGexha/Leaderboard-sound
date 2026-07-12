@@ -95,9 +95,16 @@ test('solving a spawned ticket defeats its matching monster, regardless of solve
   const resolved = applyEvent(s, ev('ticket.resolved', 'Bajram', 'T-1', 2000, 'KFC'));
 
   assert.deepStrictEqual(resolved.effects, [
-    { type: 'monster_defeated', ticketId: 'T-1', agent: 'Bajram' }
+    { type: 'monster_defeated', ticketId: 'T-1', agent: 'Bajram', priority: 'medium' }
   ]);
   assert.deepStrictEqual(publicState(s).invasion, { activeCount: 0, enemies: [] });
+});
+
+test('defeating an urgent monster reports urgent priority in the effect', () => {
+  const s = createDay(AGENTS);
+  applyEvent(s, { ...ev('ticket.created', 'Alpet', 'U-9', 1000, 'KFC'), priority: 'urgent' });
+  const resolved = applyEvent(s, ev('ticket.resolved', 'Kushtrim', 'U-9', 2000, 'KFC'));
+  assert.strictEqual(resolved.effects[0].priority, 'urgent');
 });
 
 test('resolves increment count and fire a tier announcement every time, falling back to SOLVED between milestones', () => {
