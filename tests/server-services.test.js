@@ -140,11 +140,11 @@ test('feature flags default true and explicit false is exposed', () => {
   const defaults = createArenaState({ config: CONFIG, store: memoryStore(), now: () => 0, logger: silentLogger });
   assert.deepStrictEqual(defaults.snapshot().config.features, {
     inboxInvasion: true, comebackAnnouncements: true, endOfDayAwards: true,
-    urgentBossAnnouncements: true, teamCombos: true
+    urgentBossAnnouncements: true, teamCombos: true, livingBoard: true
   });
   const config = { ...CONFIG, features: {
     inboxInvasion: false, comebackAnnouncements: false, endOfDayAwards: false,
-    urgentBossAnnouncements: false, teamCombos: false
+    urgentBossAnnouncements: false, teamCombos: false, livingBoard: false
   } };
   const off = createArenaState({ config, store: memoryStore(), now: () => 0, logger: silentLogger });
   assert.deepStrictEqual(off.snapshot().config.features, config.features);
